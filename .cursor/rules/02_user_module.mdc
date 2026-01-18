@@ -4,31 +4,47 @@ globs: **/user.js, **/Login.vue, **/Register.vue, **/Settings.vue, **/user_modul
 ---
 # 模块 2: 用户管理模块
 
-本模块负责用户注册、登录、信息管理及权限控制。
+## ⚠️ 重要提示
+
+**开发本模块时，请确保：**
+1. 前后端接口严格对齐（参考 `ARCHITECTURE.md`）
+2. UI 样式对齐参考网站 https://www.smallfighter.cn/cidProduct.html
+3. 所有接口返回统一格式：`{ code, message, data }`
+4. 密码必须加密存储，使用 bcryptjs
+
+## 一、模块概述
+
+本模块负责用户注册、登录、信息管理及权限控制。完成后应具备：
+- ✅ 用户注册功能（邮箱/手机号）
+- ✅ 用户登录功能（邮箱/手机号 + 密码）
+- ✅ JWT Token 认证
+- ✅ 用户信息管理
+- ✅ 密码修改功能
 
 ## 二、功能需求
 
-### 2.2.1 用户管理模块
-- 用户注册 / 登录：支持手机号、邮箱登录
-- 权限管理：管理员、普通用户、访客权限控制
-- 个人信息管理：基本信息修改、密码修改
+### 2.1 用户管理模块
+- **用户注册**：支持邮箱、手机号注册
+- **用户登录**：支持邮箱、手机号登录
+- **权限管理**：管理员、普通用户、访客权限控制
+- **个人信息管理**：基本信息修改、密码修改、头像上传
 
-### 2.2.7 系统设置
-- 个人信息设置：头像、昵称、联系方式修改
-- 通知设置：邮件、短信通知开关设置
-- 安全设置：登录密码修改、二次验证设置
+### 2.2 系统设置
+- **个人信息设置**：头像、昵称、联系方式修改
+- **通知设置**：邮件、短信通知开关设置（可选）
+- **安全设置**：登录密码修改、二次验证设置（可选）
 
 ## 三、数据库设计
 
-### 3.1.1 用户表（users）
+### 3.1 用户表（users）
 
 ```javascript
 {
   _id: ObjectId,
   username: String,          // 用户名
-  email: String,             // 邮箱
-  phone: String,             // 手机号
-  password: String,          // 密码（加密存储）
+  email: String,             // 邮箱（唯一）
+  phone: String,             // 手机号（唯一）
+  password: String,          // 密码（bcrypt加密存储）
   avatar: String,            // 头像URL
   role: String,              // 角色：admin、user、guest
   status: String,            // 状态：active、inactive
@@ -37,15 +53,16 @@ globs: **/user.js, **/Login.vue, **/Register.vue, **/Settings.vue, **/user_modul
 }
 ```
 
-索引设计：
+**索引设计**：
 ```javascript
 db.users.createIndex({ email: 1 }, { unique: true });
 db.users.createIndex({ phone: 1 }, { unique: true });
+db.users.createIndex({ username: 1 });
 ```
 
 ## 四、后端实现
 
-### 4.3.1 用户模型（app/model/user.js）
+### 4.1 用户模型（app/model/user.js）
 
 ```javascript
 module.exports = app => {
@@ -53,22 +70,28 @@ module.exports = app => {
   const Schema = mongoose.Schema;
 
   const UserSchema = new Schema({
-    username: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    username: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true },
     phone: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    avatar: { type: String },
+    password: { type: String, required: true, select: false },
+    avatar: { type: String, default: '' },
     role: { type: String, enum: ['admin', 'user', 'guest'], default: 'user' },
     status: { type: String, enum: ['active', 'inactive'], default: 'active' },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   });
 
+  // 更新时间自动更新
+  UserSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
+    next();
+  });
+
   return mongoose.model('User', UserSchema);
 };
 ```
 
-### 4.4.1 用户控制器（app/controller/user.js）
+### 4.2 用户控制器（app/controller/user.js）
 
 ```javascript
 const Controller = require('egg').Controller;
@@ -80,12 +103,12 @@ class UserController extends Controller {
     const { ctx } = this;
     const { username, email, phone, password } = ctx.request.body;
 
-    // 验证参数
+    // 参数验证
     ctx.validate({
-      username: { type: 'string', required: true },
+      username: { type: 'string', required: true, min: 2, max: 20 },
       email: { type: 'email', required: true },
-      phone: { type: 'string', required: true },
-      password: { type: 'string', required: true, min: 6 },
+      phone: { type: 'string', required: true, pattern: /^1[3-9]\d{9}$/ },
+      password: { type: 'string', required: true, min: 6, max: 20 },
     });
 
     // 检查用户是否已存在
@@ -94,7 +117,11 @@ class UserController extends Controller {
     });
     if (existingUser) {
       ctx.status = 400;
-      ctx.body = { message: '用户已存在' };
+      ctx.body = {
+        code: 400,
+        message: existingUser.email === email ? '邮箱已被注册' : '手机号已被注册',
+        data: null,
+      };
       return;
     }
 
@@ -111,7 +138,15 @@ class UserController extends Controller {
     await user.save();
 
     ctx.status = 201;
-    ctx.body = { message: '用户注册成功' };
+    ctx.body = {
+      code: 201,
+      message: '用户注册成功',
+      data: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    };
   }
 
   // 用户登录
@@ -119,7 +154,17 @@ class UserController extends Controller {
     const { ctx } = this;
     const { email, phone, password } = ctx.request.body;
 
-    // 验证参数
+    // 验证参数（email 和 phone 至少提供一个）
+    if (!email && !phone) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: '请提供邮箱或手机号',
+        data: null,
+      };
+      return;
+    }
+
     ctx.validate({
       email: { type: 'email', required: false },
       phone: { type: 'string', required: false },
@@ -128,11 +173,16 @@ class UserController extends Controller {
 
     // 查找用户
     const user = await ctx.model.User.findOne({
-      $or: [{ email }, { phone }],
-    });
+      $or: email ? [{ email }] : [{ phone }],
+    }).select('+password');
+    
     if (!user) {
       ctx.status = 401;
-      ctx.body = { message: '用户不存在' };
+      ctx.body = {
+        code: 401,
+        message: '用户不存在',
+        data: null,
+      };
       return;
     }
 
@@ -140,18 +190,34 @@ class UserController extends Controller {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       ctx.status = 401;
-      ctx.body = { message: '密码错误' };
+      ctx.body = {
+        code: 401,
+        message: '密码错误',
+        data: null,
+      };
+      return;
+    }
+
+    // 检查用户状态
+    if (user.status !== 'active') {
+      ctx.status = 403;
+      ctx.body = {
+        code: 403,
+        message: '账户已被禁用',
+        data: null,
+      };
       return;
     }
 
     // 生成JWT令牌
     const token = ctx.app.jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id.toString(), role: user.role },
       ctx.app.config.jwt.secret,
       { expiresIn: ctx.app.config.jwt.expiresIn }
     );
 
     ctx.body = {
+      code: 200,
       message: '登录成功',
       data: {
         token,
@@ -160,6 +226,7 @@ class UserController extends Controller {
           username: user.username,
           email: user.email,
           phone: user.phone,
+          avatar: user.avatar,
           role: user.role,
         },
       },
@@ -171,16 +238,112 @@ class UserController extends Controller {
     const { ctx } = this;
     const userId = ctx.state.user.id;
 
-    const user = await ctx.model.User.findById(userId).select('-password');
+    const user = await ctx.model.User.findById(userId);
     if (!user) {
       ctx.status = 404;
-      ctx.body = { message: '用户不存在' };
+      ctx.body = {
+        code: 404,
+        message: '用户不存在',
+        data: null,
+      };
       return;
     }
 
     ctx.body = {
+      code: 200,
       message: '获取用户信息成功',
-      data: user,
+      data: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    };
+  }
+
+  // 更新用户信息
+  async updateUserInfo() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { username, avatar } = ctx.request.body;
+
+    ctx.validate({
+      username: { type: 'string', required: false, min: 2, max: 20 },
+      avatar: { type: 'string', required: false },
+    });
+
+    const updateData = {};
+    if (username) updateData.username = username;
+    if (avatar !== undefined) updateData.avatar = avatar;
+
+    const user = await ctx.model.User.findByIdAndUpdate(
+      userId,
+      { ...updateData, updatedAt: Date.now() },
+      { new: true }
+    );
+
+    ctx.body = {
+      code: 200,
+      message: '更新用户信息成功',
+      data: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        role: user.role,
+      },
+    };
+  }
+
+  // 修改密码
+  async changePassword() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { oldPassword, newPassword } = ctx.request.body;
+
+    ctx.validate({
+      oldPassword: { type: 'string', required: true },
+      newPassword: { type: 'string', required: true, min: 6, max: 20 },
+    });
+
+    const user = await ctx.model.User.findById(userId).select('+password');
+    if (!user) {
+      ctx.status = 404;
+      ctx.body = {
+        code: 404,
+        message: '用户不存在',
+        data: null,
+      };
+      return;
+    }
+
+    // 验证旧密码
+    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isOldPasswordValid) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: '旧密码错误',
+        data: null,
+      };
+      return;
+    }
+
+    // 加密新密码
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedNewPassword;
+    await user.save();
+
+    ctx.body = {
+      code: 200,
+      message: '密码修改成功',
+      data: null,
     };
   }
 }
@@ -188,61 +351,127 @@ class UserController extends Controller {
 module.exports = UserController;
 ```
 
-后端路由补充：
+### 4.3 路由配置（app/router.js）
+
 ```javascript
   // 用户相关路由
   router.post('/api/user/register', controller.user.register);
   router.post('/api/user/login', controller.user.login);
   router.get('/api/user/info', jwt, controller.user.getUserInfo);
+  router.put('/api/user/info', jwt, controller.user.updateUserInfo);
+  router.put('/api/user/password', jwt, controller.user.changePassword);
 ```
 
 ## 五、前端实现
 
-### 5.5 API 补充 (src/api/index.js)
+### 5.1 API 定义（src/api/user.js）
 
 ```javascript
-// 用户相关API
+import api from './index';
+
 export const userApi = {
-  register: data => api.post('/api/user/register', data),
-  login: data => api.post('/api/user/login', data),
-  getUserInfo: () => api.get('/api/user/info'),
+  // 用户注册
+  register: (data) => {
+    return api.post('/api/user/register', {
+      username: data.username,
+      email: data.email,
+      phone: data.phone,
+      password: data.password,
+    });
+  },
+  
+  // 用户登录
+  login: (data) => {
+    return api.post('/api/user/login', {
+      email: data.email,
+      phone: data.phone,
+      password: data.password,
+    });
+  },
+  
+  // 获取用户信息
+  getUserInfo: () => {
+    return api.get('/api/user/info');
+  },
+  
+  // 更新用户信息
+  updateUserInfo: (data) => {
+    return api.put('/api/user/info', {
+      username: data.username,
+      avatar: data.avatar,
+    });
+  },
+  
+  // 修改密码
+  changePassword: (data) => {
+    return api.put('/api/user/password', {
+      oldPassword: data.oldPassword,
+      newPassword: data.newPassword,
+    });
+  },
 };
 ```
 
-### 5.6.1 登录页面（src/views/Login.vue）
+### 5.2 登录页面（src/views/Login.vue）
 
 ```vue
 <template>
   <div class="login-container">
-    <el-card class="login-card" shadow="hover">
+    <el-card class="login-card card-shadow">
       <template #header>
         <div class="card-header">
-          <span>买量小飞机 - 登录</span>
+          <h2>买量小飞机</h2>
+          <p class="subtitle">一站式智能投放工具</p>
         </div>
       </template>
       
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
-        <el-form-item label="邮箱/手机号" prop="account">
+      <el-form 
+        :model="form" 
+        :rules="rules" 
+        ref="formRef" 
+        label-width="0"
+        @submit.prevent="onLogin"
+      >
+        <el-form-item prop="account">
           <el-input 
             v-model="form.account" 
             placeholder="请输入邮箱或手机号"
-            prefix-icon="User"
-          ></el-input>
+            size="large"
+            :prefix-icon="User"
+            clearable
+          />
         </el-form-item>
         
-        <el-form-item label="密码" prop="password">
+        <el-form-item prop="password">
           <el-input 
             v-model="form.password" 
             type="password" 
             placeholder="请输入密码"
-            prefix-icon="Lock"
+            size="large"
+            :prefix-icon="Lock"
             show-password
-          ></el-input>
+            clearable
+            @keyup.enter="onLogin"
+          />
         </el-form-item>
         
         <el-form-item>
-          <el-button type="primary" @click="onLogin" :loading="loading">登录</el-button>
-          <el-button @click="$router.push('/register')">注册</el-button>
+          <el-button 
+            type="primary" 
+            size="large"
+            :loading="loading" 
+            @click="onLogin"
+            style="width: 100%"
+          >
+            登录
+          </el-button>
+        </el-form-item>
+        
+        <el-form-item>
+          <div class="register-link">
+            还没有账号？
+            <el-link type="primary" @click="$router.push('/register')">立即注册</el-link>
+          </div>
         </el-form-item>
       </el-form>
     </el-card>
@@ -252,12 +481,13 @@ export const userApi = {
 <script setup>
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import { useStore } from 'vuex';
 import { ElMessage } from 'element-plus';
-import { userApi } from '../api';
+import { User, Lock } from '@element-plus/icons-vue';
+import { useUserStore } from '../store';
+import { userApi } from '../api/user';
 
 const router = useRouter();
-const store = useStore();
+const userStore = useUserStore();
 const loading = ref(false);
 const formRef = ref();
 
@@ -266,9 +496,21 @@ const form = reactive({
   password: '',
 });
 
+// 验证邮箱或手机号
+const validateAccount = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请输入邮箱或手机号'));
+  } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value) && 
+             !/^1[3-9]\d{9}$/.test(value)) {
+    callback(new Error('请输入正确的邮箱或手机号'));
+  } else {
+    callback();
+  }
+};
+
 const rules = reactive({
   account: [
-    { required: true, message: '请输入邮箱或手机号', trigger: 'blur' },
+    { validator: validateAccount, trigger: 'blur' },
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -285,15 +527,19 @@ const onLogin = async () => {
       
       try {
         // 判断是邮箱还是手机号
-        const credentials = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.account)
-          ? { email: form.account, password: form.password }
-          : { phone: form.account, password: form.password };
+        const isEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(form.account);
+        const credentials = {
+          password: form.password,
+        };
         
-        const response = await userApi.login(credentials);
-        ElMessage.success(response.message);
+        if (isEmail) {
+          credentials.email = form.account;
+        } else {
+          credentials.phone = form.account;
+        }
         
-        // 获取用户信息
-        await store.dispatch('getUserInfo');
+        const response = await userStore.login(credentials);
+        ElMessage.success(response.message || '登录成功');
         
         // 跳转到首页
         router.push('/dashboard');
@@ -307,23 +553,331 @@ const onLogin = async () => {
 };
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #f5f7fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
 }
 
 .login-card {
-  width: 400px;
+  width: 100%;
+  max-width: 400px;
+  
+  .card-header {
+    text-align: center;
+    
+    h2 {
+      margin: 0 0 8px 0;
+      color: #1890ff;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    
+    .subtitle {
+      margin: 0;
+      color: #666;
+      font-size: 14px;
+    }
+  }
+  
+  .register-link {
+    text-align: center;
+    width: 100%;
+    color: #666;
+    font-size: 14px;
+  }
 }
 
-.card-header {
-  text-align: center;
-  font-size: 18px;
-  font-weight: bold;
+:deep(.el-form-item) {
+  margin-bottom: 20px;
 }
 </style>
 ```
+
+### 5.3 注册页面（src/views/Register.vue）
+
+```vue
+<template>
+  <div class="register-container">
+    <el-card class="register-card card-shadow">
+      <template #header>
+        <div class="card-header">
+          <h2>注册账号</h2>
+          <p class="subtitle">创建您的买量小飞机账号</p>
+        </div>
+      </template>
+      
+      <el-form 
+        :model="form" 
+        :rules="rules" 
+        ref="formRef" 
+        label-width="0"
+      >
+        <el-form-item prop="username">
+          <el-input 
+            v-model="form.username" 
+            placeholder="请输入用户名（2-20个字符）"
+            size="large"
+            :prefix-icon="User"
+            clearable
+          />
+        </el-form-item>
+        
+        <el-form-item prop="email">
+          <el-input 
+            v-model="form.email" 
+            placeholder="请输入邮箱"
+            size="large"
+            :prefix-icon="Message"
+            clearable
+          />
+        </el-form-item>
+        
+        <el-form-item prop="phone">
+          <el-input 
+            v-model="form.phone" 
+            placeholder="请输入手机号"
+            size="large"
+            :prefix-icon="Phone"
+            clearable
+          />
+        </el-form-item>
+        
+        <el-form-item prop="password">
+          <el-input 
+            v-model="form.password" 
+            type="password" 
+            placeholder="请输入密码（6-20个字符）"
+            size="large"
+            :prefix-icon="Lock"
+            show-password
+            clearable
+          />
+        </el-form-item>
+        
+        <el-form-item prop="confirmPassword">
+          <el-input 
+            v-model="form.confirmPassword" 
+            type="password" 
+            placeholder="请再次输入密码"
+            size="large"
+            :prefix-icon="Lock"
+            show-password
+            clearable
+          />
+        </el-form-item>
+        
+        <el-form-item>
+          <el-button 
+            type="primary" 
+            size="large"
+            :loading="loading" 
+            @click="onRegister"
+            style="width: 100%"
+          >
+            注册
+          </el-button>
+        </el-form-item>
+        
+        <el-form-item>
+          <div class="login-link">
+            已有账号？
+            <el-link type="primary" @click="$router.push('/login')">立即登录</el-link>
+          </div>
+        </el-form-item>
+      </el-form>
+    </el-card>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { User, Lock, Message, Phone } from '@element-plus/icons-vue';
+import { userApi } from '../api/user';
+
+const router = useRouter();
+const loading = ref(false);
+const formRef = ref();
+
+const form = reactive({
+  username: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
+});
+
+// 验证确认密码
+const validateConfirmPassword = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请再次输入密码'));
+  } else if (value !== form.password) {
+    callback(new Error('两次输入的密码不一致'));
+  } else {
+    callback();
+  }
+};
+
+const rules = reactive({
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 2, max: 20, message: '用户名长度为2-20个字符', trigger: 'blur' },
+  ],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' },
+  ],
+  phone: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' },
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '密码长度为6-20个字符', trigger: 'blur' },
+  ],
+  confirmPassword: [
+    { validator: validateConfirmPassword, trigger: 'blur' },
+  ],
+});
+
+const onRegister = async () => {
+  if (!formRef.value) return;
+  
+  await formRef.value.validate(async (valid) => {
+    if (valid) {
+      loading.value = true;
+      
+      try {
+        const response = await userApi.register({
+          username: form.username,
+          email: form.email,
+          phone: form.phone,
+          password: form.password,
+        });
+        
+        ElMessage.success(response.message || '注册成功');
+        
+        // 跳转到登录页
+        setTimeout(() => {
+          router.push('/login');
+        }, 1000);
+      } catch (error) {
+        ElMessage.error(error.message || '注册失败');
+      } finally {
+        loading.value = false;
+      }
+    }
+  });
+};
+</script>
+
+<style scoped lang="scss">
+.register-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.register-card {
+  width: 100%;
+  max-width: 400px;
+  
+  .card-header {
+    text-align: center;
+    
+    h2 {
+      margin: 0 0 8px 0;
+      color: #1890ff;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    
+    .subtitle {
+      margin: 0;
+      color: #666;
+      font-size: 14px;
+    }
+  }
+  
+  .login-link {
+    text-align: center;
+    width: 100%;
+    color: #666;
+    font-size: 14px;
+  }
+}
+
+:deep(.el-form-item) {
+  margin-bottom: 20px;
+}
+</style>
+```
+
+## 六、对齐检查清单
+
+完成本模块后，请检查以下事项：
+
+### 后端检查项
+- [ ] 注册接口返回格式：`{ code: 201, message, data: { id, username, email } }`
+- [ ] 登录接口返回格式：`{ code: 200, message, data: { token, user } }`
+- [ ] 获取用户信息接口返回格式：`{ code: 200, message, data: { id, username, email, ... } }`
+- [ ] 密码使用 bcrypt 加密存储
+- [ ] 错误响应格式统一
+
+### 前端检查项
+- [ ] API 调用参数名与后端一致（username, email, phone, password）
+- [ ] 登录后正确存储 Token 和用户信息
+- [ ] 登录页面 UI 样式对齐参考网站（蓝色主题、卡片式布局）
+- [ ] 注册页面表单验证完善
+- [ ] 错误提示友好清晰
+
+### 接口对齐检查
+- [ ] 注册接口：`POST /api/user/register` - 前后端参数一致
+- [ ] 登录接口：`POST /api/user/login` - 前后端参数一致（email/phone + password）
+- [ ] 获取用户信息：`GET /api/user/info` - 返回数据结构一致
+- [ ] 更新用户信息：`PUT /api/user/info` - 前后端参数一致
+- [ ] 修改密码：`PUT /api/user/password` - 前后端参数一致
+
+### UI 样式检查
+- [ ] 登录/注册页面使用蓝色渐变背景
+- [ ] 卡片样式使用圆角和阴影
+- [ ] 表单输入框大小统一（large）
+- [ ] 按钮样式符合 Element Plus 规范
+- [ ] 响应式布局正常
+
+## 七、测试验证
+
+### 7.1 后端测试
+
+```bash
+# 测试注册接口
+curl -X POST http://localhost:7001/api/user/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"testuser","email":"test@example.com","phone":"13800138000","password":"123456"}'
+
+# 测试登录接口
+curl -X POST http://localhost:7001/api/user/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"123456"}'
+
+# 测试获取用户信息（需要Token）
+curl -X GET http://localhost:7001/api/user/info \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### 7.2 前端测试
+
+1. 访问注册页面，填写表单并提交
+2. 访问登录页面，使用注册的账号登录
+3. 检查 Token 是否正确存储
+4. 检查登录后是否正确跳转
+5. 检查错误提示是否友好

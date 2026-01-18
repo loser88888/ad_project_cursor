@@ -2,48 +2,149 @@
 
 本文档是**买量小飞机**网页应用复刻项目的入口指南。本项目已被拆分为多个模块化的 Prompt 文件，以便分步骤、清晰地完成开发任务。
 
+## 🎯 项目目标
+
+复刻买量小飞机（参考：https://www.smallfighter.cn/cidProduct.html）的核心功能，包括：
+- Click-ID 技术服务管理
+- 广告账户统一管理
+- 广告计划批量操作
+- 数据统计与可视化
+- 创意素材管理
+
+## ⚠️ 重要开发原则
+
+### 1. 前后端接口对齐
+- **必须严格对齐**：每个模块开发时，后端 API 的入参、出参必须与前端调用完全一致
+- **参考文档**：开发前务必查看 `ARCHITECTURE.md` 了解接口规范和数据流转
+- **验证机制**：每个模块完成后，使用 Postman 或前端直接调用验证接口对齐性
+
+### 2. UI 样式对齐
+- **参考网站**：页面 UI 应尽量对齐 https://www.smallfighter.cn/cidProduct.html 的设计风格
+- **设计元素**：
+  - 主色调：蓝色系（参考网站主题色）
+  - 布局：现代化卡片式布局，清晰的层次结构
+  - 组件：使用 Element Plus 组件库，保持风格统一
+  - 响应式：支持不同屏幕尺寸适配
+
+### 3. 分阶段开发流程
+- **顺序执行**：严格按照模块顺序开发，不可跳跃
+- **功能闭环**：每个模块完成后必须实现完整的前后端功能闭环
+- **测试验证**：每个模块完成后进行功能测试，确保无阻塞性问题
+
 ## 📁 Prompt 目录结构
 
-所有的 Prompt 文件都存放在 `.cursor/rulse/` 目录下：
+所有的 Prompt 文件都存放在 `.cursor/rules/` 目录下：
 
-1.  [**00_master_plan.md**](.cursor/rulse/00_master_plan.md)
+1.  [**00_master_plan.mdc**](.cursor/rules/00_master_plan.mdc)
     *   **内容**：项目背景、整体架构、技术栈选择。
     *   **用途**：了解项目全局，确认开发方向。
+    *   **必读**：开发前必须阅读
 
-2.  [**01_infrastructure.mdc**](.cursor/rulse/01_infrastructure.mdc)
+2.  [**ARCHITECTURE.md**](ARCHITECTURE.md) ⭐ **新增**
+    *   **内容**：前后端运转形式、接口规范、数据流转、对齐机制。
+    *   **用途**：确保前后端接口对齐，理解系统架构。
+    *   **必读**：每个模块开发前必须参考
+
+3.  [**01_infrastructure.mdc**](.cursor/rules/01_infrastructure.mdc)
     *   **内容**：前后端项目初始化、基础配置、目录结构、公共组件。
     *   **用途**：搭建项目骨架，跑通前后端基础环境。
+    *   **产出**：可运行的前后端基础框架
 
-3.  [**02_user_module.mdc**](.cursor/rulse/02_user_module.mdc)
+4.  [**02_user_module.mdc**](.cursor/rules/02_user_module.mdc)
     *   **内容**：用户注册、登录、个人信息管理、系统设置。
     *   **用途**：实现核心的用户认证和权限体系。
+    *   **验证**：前后端接口对齐，UI 样式符合参考网站
 
-4.  [**03_account_module.mdc**](.cursor/rulse/03_account_module.mdc)
+5.  [**03_account_module.mdc**](.cursor/rules/03_account_module.mdc)
     *   **内容**：广告账户的接入、列表展示、授权管理。
     *   **用途**：实现多平台广告账户的连接功能。
+    *   **验证**：接口对齐，UI 对齐参考网站
 
-5.  [**04_plan_module.mdc**](.cursor/rulse/04_plan_module.mdc)
+6.  [**04_plan_module.mdc**](.cursor/rules/04_plan_module.mdc)
     *   **内容**：广告计划的创建、编辑、状态管理。
     *   **用途**：实现广告投放的核心业务逻辑。
+    *   **验证**：接口对齐，批量操作功能正常
 
-6.  [**05_creative_module.mdc**](.cursor/rulse/05_creative_module.mdc)
+7.  [**05_creative_module.mdc**](.cursor/rules/05_creative_module.mdc)
     *   **内容**：广告创意的上传、管理、A/B 测试。
     *   **用途**：实现素材管理和创意优化功能。
+    *   **验证**：文件上传功能，接口对齐
 
-7.  [**06_statistics_module.mdc**](.cursor/rulse/06_statistics_module.mdc)
+8.  [**06_statistics_module.mdc**](.cursor/rules/06_statistics_module.mdc)
     *   **内容**：数据统计分析、仪表盘可视化、智能优化建议。
     *   **用途**：实现数据报表和可视化大屏。
+    *   **验证**：图表展示正常，数据准确
 
-8.  [**07_deployment.mdc**](.cursor/rulse/07_deployment.mdc)
+9.  [**07_deployment.mdc**](.cursor/rules/07_deployment.mdc)
     *   **内容**：服务器环境准备、Nginx 配置、PM2 部署。
     *   **用途**：项目上线部署指南。
 
-## 🚀 如何使用
+## 🚀 开发流程
 
-建议按照以下顺序进行开发：
+### 第一步：项目准备
+1. **阅读全局规划**：阅读 `00_master_plan.mdc`，理解项目目标和技术栈
+2. **理解架构**：仔细阅读 `ARCHITECTURE.md`，理解前后端运转形式和接口规范
+3. **环境准备**：安装 Node.js、MongoDB、Git 等开发工具
 
-1.  **阅读全局规划**：首先阅读 `00_master_plan.md`，理解项目目标。
-2.  **按序执行**：从 `01_infrastructure.md` 开始，将每个文件的内容作为 Prompt 输入给 AI 助手，或者根据文件内容手动编写代码。
-3.  **模块化开发**：每个模块都包含了数据库设计、后端 API 实现和前端页面实现，确保该模块功能闭环后再进入下一个模块。
+### 第二步：基础设施搭建
+1. **执行模块 01**：按照 `01_infrastructure.mdc` 搭建前后端基础框架
+2. **验证运行**：确保前后端可以正常启动，基础路由和 API 调用正常
+3. **检查对齐**：验证基础 API 接口的前后端对齐情况
+
+### 第三步：模块化开发（按顺序执行）
+对于每个业务模块（02-06），遵循以下步骤：
+
+1. **阅读模块文档**：仔细阅读对应模块的 `.mdc` 文件
+2. **参考架构文档**：查看 `ARCHITECTURE.md` 中的接口规范示例
+3. **后端开发**：
+   - 设计数据库模型
+   - 实现 Controller 和 Service
+   - 定义路由和接口
+   - **关键**：严格按照接口规范定义入参和出参
+4. **前端开发**：
+   - 创建页面组件
+   - 实现 API 调用（确保与后端接口对齐）
+   - 实现 UI（参考网站样式）
+   - **关键**：确保 API 调用的参数和返回值与后端完全一致
+5. **功能验证**：
+   - 测试前后端接口调用是否正常
+   - 验证 UI 是否符合参考网站风格
+   - 检查功能是否完整
+6. **文档更新**：如有接口变更，同步更新 `ARCHITECTURE.md`
+
+### 第四步：部署上线
+1. **执行模块 07**：按照 `07_deployment.mdc` 进行部署
+2. **生产验证**：验证生产环境功能正常
+
+## 📋 开发检查清单
+
+每个模块完成后，请检查以下事项：
+
+- [ ] 后端 API 接口已实现，入参和出参格式正确
+- [ ] 前端 API 调用与后端接口完全对齐（参数名、类型、返回值结构）
+- [ ] 数据库模型设计合理，索引已创建
+- [ ] 前端页面 UI 风格与参考网站对齐
+- [ ] 功能测试通过，无阻塞性 bug
+- [ ] 错误处理完善，用户提示友好
+- [ ] 代码注释清晰，符合规范
+
+## 🔗 参考资源
+
+- **参考网站**：https://www.smallfighter.cn/cidProduct.html
+- **技术文档**：
+  - Vue.js 3: https://cn.vuejs.org/
+  - Egg.js: https://www.eggjs.org/
+  - Element Plus: https://element-plus.org/zh-CN/
+  - MongoDB: https://www.mongodb.com/docs/
+
+## 💡 AI 助手使用提示
+
+当使用 AI 助手生成代码时，请：
+
+1. **明确要求**：明确说明需要实现的功能模块
+2. **提供上下文**：引用相关的架构文档和模块文档
+3. **强调对齐**：明确要求前后端接口必须对齐
+4. **样式要求**：明确要求 UI 参考指定网站样式
+5. **验证代码**：生成后验证接口对齐性和功能完整性
 
 ---

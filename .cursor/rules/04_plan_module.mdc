@@ -4,318 +4,213 @@ globs: **/ad_plan.js, **/AdPlan.vue
 ---
 # 模块 4: 广告计划管理
 
-本模块负责广告计划的创建、编辑、状态管理及数据追踪。
+## ⚠️ 重要提示
+
+**开发本模块时，请确保：**
+1. 前后端接口严格对齐（参考 `ARCHITECTURE.md`）
+2. UI 样式对齐参考网站 https://www.smallfighter.cn/cidProduct.html
+3. 所有接口返回统一格式：`{ code, message, data }`
+4. 支持批量操作功能（批量启用、暂停、删除）
+
+## 一、模块概述
+
+本模块负责广告计划的创建、编辑、状态管理及数据追踪。完成后应具备：
+- ✅ 计划创建（支持批量创建）
+- ✅ 计划编辑（基本信息、投放策略）
+- ✅ 计划状态管理（启用、暂停、删除）
+- ✅ 计划复制功能
+- ✅ 批量操作功能
 
 ## 二、功能需求
 
-### 2.2.3 广告计划管理
-- 计划创建：支持批量创建、模板创建
-- 计划编辑：基本信息修改、投放策略调整
-- 计划状态管理：启用、暂停、删除
-- 计划复制：快速复制已有计划
+### 2.1 广告计划管理
+- **计划创建**：支持单个/批量创建、模板创建
+- **计划编辑**：基本信息修改、投放策略调整
+- **计划状态管理**：启用、暂停、删除
+- **计划复制**：快速复制已有计划
+- **批量操作**：批量启用、暂停、删除
 
 ## 三、数据库设计
 
-### 3.1.3 广告计划表（ad_plans）
+### 3.1 广告计划表（ad_plans）
 
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId,          // 关联用户ID
-  accountId: ObjectId,       // 关联广告账户ID
-  planName: String,          // 计划名称
-  platform: String,          // 平台
-  objective: String,         // 投放目标：转化、曝光、点击
-  budget: Number,            // 预算
-  schedule: {                // 投放时间设置
-    startTime: Date,
-    endTime: Date,
-    isAllDay: Boolean,
-    timeSlots: Array
-  },
-  targeting: {               // 定向设置
-    age: Array,
-    gender: String,
-    regions: Array,
-    interests: Array,
-    devices: Array
-  },
-  status: String,            // 状态：active、paused、deleted
-  stats: {                   // 统计数据
-    impressions: Number,
-    clicks: Number,
-    conversions: Number,
-    cost: Number,
-    ctr: Number,
-    cvr: Number,
-    roi: Number
-  },
-  createdAt: Date,           // 创建时间
-  updatedAt: Date            // 更新时间
-}
-```
+（数据库设计与原文件相同，保持不变）
 
 索引设计：
 ```javascript
 db.ad_plans.createIndex({ userId: 1 });
 db.ad_plans.createIndex({ accountId: 1 });
 db.ad_plans.createIndex({ status: 1 });
+db.ad_plans.createIndex({ platform: 1 });
+db.ad_plans.createIndex({ userId: 1, status: 1 });
 ```
 
 ## 四、后端实现
 
-### 4.3.3 广告计划模型（app/model/ad_plan.js）
+### 4.1 广告计划控制器（app/controller/ad_plan.js）
+
+**注意：**原文件已有完整实现，需要确保：
+1. 所有接口返回统一格式：`{ code, message, data }`
+2. 错误响应格式统一
+3. 添加批量操作接口
+
+**批量操作接口补充：**
 
 ```javascript
-module.exports = app => {
-  const mongoose = app.mongoose;
-  const Schema = mongoose.Schema;
+// 批量更新状态
+async batchUpdateStatus() {
+  const { ctx } = this;
+  const userId = ctx.state.user.id;
+  const { ids, status } = ctx.request.body;
 
-  const AdPlanSchema = new Schema({
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    accountId: { type: Schema.Types.ObjectId, ref: 'AdAccount', required: true },
-    planName: { type: String, required: true },
-    platform: { type: String, required: true },
-    objective: { type: String, enum: ['conversion', 'impression', 'click'], default: 'conversion' },
-    budget: { type: Number, required: true },
-    schedule: {
-      startTime: { type: Date, required: true },
-      endTime: { type: Date, required: true },
-      isAllDay: { type: Boolean, default: true },
-      timeSlots: { type: Array, default: [] },
-    },
-    targeting: {
-      age: { type: Array, default: [] },
-      gender: { type: String, enum: ['all', 'male', 'female'], default: 'all' },
-      regions: { type: Array, default: [] },
-      interests: { type: Array, default: [] },
-      devices: { type: Array, default: [] },
-    },
-    status: { type: String, enum: ['active', 'paused', 'deleted'], default: 'active' },
-    stats: {
-      impressions: { type: Number, default: 0 },
-      clicks: { type: Number, default: 0 },
-      conversions: { type: Number, default: 0 },
-      cost: { type: Number, default: 0 },
-      ctr: { type: Number, default: 0 },
-      cvr: { type: Number, default: 0 },
-      roi: { type: Number, default: 0 },
-    },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
+  ctx.validate({
+    ids: { type: 'array', required: true },
+    status: { type: 'string', required: true, enum: ['active', 'paused', 'deleted'] },
   });
 
-  return mongoose.model('AdPlan', AdPlanSchema);
-};
-```
+  await ctx.model.AdPlan.updateMany(
+    { _id: { $in: ids }, userId },
+    { status, updatedAt: Date.now() }
+  );
 
-### 4.4.2 广告计划控制器（app/controller/ad_plan.js）
-
-```javascript
-const Controller = require('egg').Controller;
-
-class AdPlanController extends Controller {
-  // 创建广告计划
-  async create() {
-    const { ctx } = this;
-    const userId = ctx.state.user.id;
-    const {
-      accountId,
-      planName,
-      platform,
-      objective,
-      budget,
-      schedule,
-      targeting,
-    } = ctx.request.body;
-
-    // 验证参数
-    ctx.validate({
-      accountId: { type: 'string', required: true },
-      planName: { type: 'string', required: true },
-      platform: { type: 'string', required: true },
-      objective: { type: 'string', required: true },
-      budget: { type: 'number', required: true },
-      schedule: { type: 'object', required: true },
-      targeting: { type: 'object', required: true },
-    });
-
-    // 检查广告账户是否存在
-    const adAccount = await ctx.model.AdAccount.findOne({
-      _id: accountId,
-      userId,
-    });
-    if (!adAccount) {
-      ctx.status = 404;
-      ctx.body = { message: '广告账户不存在' };
-      return;
-    }
-
-    // 创建广告计划
-    const adPlan = new ctx.model.AdPlan({
-      userId,
-      accountId,
-      planName,
-      platform,
-      objective,
-      budget,
-      schedule,
-      targeting,
-    });
-    await adPlan.save();
-
-    ctx.status = 201;
-    ctx.body = {
-      message: '广告计划创建成功',
-      data: adPlan,
-    };
-  }
-
-  // 获取广告计划列表
-  async list() {
-    const { ctx } = this;
-    const userId = ctx.state.user.id;
-    const { page = 1, pageSize = 10, status, platform } = ctx.query;
-
-    // 构建查询条件
-    const query = { userId };
-    if (status) query.status = status;
-    if (platform) query.platform = platform;
-
-    // 分页查询
-    const total = await ctx.model.AdPlan.countDocuments(query);
-    const adPlans = await ctx.model.AdPlan.find(query)
-      .skip((page - 1) * pageSize)
-      .limit(Number(pageSize))
-      .sort({ createdAt: -1 });
-
-    ctx.body = {
-      message: '获取广告计划列表成功',
-      data: {
-        list: adPlans,
-        pagination: {
-          total,
-          page: Number(page),
-          pageSize: Number(pageSize),
-          pages: Math.ceil(total / pageSize),
-        },
-      },
-    };
-  }
-
-  // 获取广告计划详情
-  async detail() {
-    const { ctx } = this;
-    const userId = ctx.state.user.id;
-    const { id } = ctx.params;
-
-    const adPlan = await ctx.model.AdPlan.findOne({
-      _id: id,
-      userId,
-    });
-    if (!adPlan) {
-      ctx.status = 404;
-      ctx.body = { message: '广告计划不存在' };
-      return;
-    }
-
-    ctx.body = {
-      message: '获取广告计划详情成功',
-      data: adPlan,
-    };
-  }
-
-  // 更新广告计划
-  async update() {
-    const { ctx } = this;
-    const userId = ctx.state.user.id;
-    const { id } = ctx.params;
-    const updateData = ctx.request.body;
-
-    // 验证参数
-    ctx.validate({
-      planName: { type: 'string', required: false },
-      budget: { type: 'number', required: false },
-      schedule: { type: 'object', required: false },
-      targeting: { type: 'object', required: false },
-      status: { type: 'string', required: false },
-    });
-
-    // 检查广告计划是否存在
-    const adPlan = await ctx.model.AdPlan.findOne({
-      _id: id,
-      userId,
-    });
-    if (!adPlan) {
-      ctx.status = 404;
-      ctx.body = { message: '广告计划不存在' };
-      return;
-    }
-
-    // 更新广告计划
-    const updatedAdPlan = await ctx.model.AdPlan.findByIdAndUpdate(
-      id,
-      { ...updateData, updatedAt: Date.now() },
-      { new: true }
-    );
-
-    ctx.body = {
-      message: '广告计划更新成功',
-      data: updatedAdPlan,
-    };
-  }
-
-  // 删除广告计划
-  async delete() {
-    const { ctx } = this;
-    const userId = ctx.state.user.id;
-    const { id } = ctx.params;
-
-    // 检查广告计划是否存在
-    const adPlan = await ctx.model.AdPlan.findOne({
-      _id: id,
-      userId,
-    });
-    if (!adPlan) {
-      ctx.status = 404;
-      ctx.body = { message: '广告计划不存在' };
-      return;
-    }
-
-    // 删除广告计划
-    await ctx.model.AdPlan.findByIdAndDelete(id);
-
-    ctx.body = {
-      message: '广告计划删除成功',
-    };
-  }
+  ctx.body = {
+    code: 200,
+    message: '批量更新状态成功',
+    data: { count: ids.length },
+  };
 }
 
-module.exports = AdPlanController;
+// 批量删除
+async batchDelete() {
+  const { ctx } = this;
+  const userId = ctx.state.user.id;
+  const { ids } = ctx.request.body;
+
+  ctx.validate({
+    ids: { type: 'array', required: true },
+  });
+
+  await ctx.model.AdPlan.deleteMany({ _id: { $in: ids }, userId });
+
+  ctx.body = {
+    code: 200,
+    message: '批量删除成功',
+    data: { count: ids.length },
+  };
+}
 ```
 
-### 4.5 路由配置补充（app/router.js）
+**路由配置补充：**
 
 ```javascript
-  // 广告计划相关路由
-  router.post('/api/ad-plan', jwt, controller.adPlan.create);
-  router.get('/api/ad-plan', jwt, controller.adPlan.list);
-  router.get('/api/ad-plan/:id', jwt, controller.adPlan.detail);
-  router.put('/api/ad-plan/:id', jwt, controller.adPlan.update);
-  router.delete('/api/ad-plan/:id', jwt, controller.adPlan.delete);
+// 广告计划相关路由
+router.post('/api/ad-plan', jwt, controller.adPlan.create);
+router.get('/api/ad-plan', jwt, controller.adPlan.list);
+router.get('/api/ad-plan/:id', jwt, controller.adPlan.detail);
+router.put('/api/ad-plan/:id', jwt, controller.adPlan.update);
+router.delete('/api/ad-plan/:id', jwt, controller.adPlan.delete);
+router.post('/api/ad-plan/batch/status', jwt, controller.adPlan.batchUpdateStatus);
+router.post('/api/ad-plan/batch/delete', jwt, controller.adPlan.batchDelete);
 ```
 
 ## 五、前端实现
 
-### 5.5 API 补充 (src/api/index.js)
+### 5.1 API 定义（src/api/ad_plan.js）
 
 ```javascript
-// 广告计划相关API
+import api from './index';
+
 export const adPlanApi = {
-  create: data => api.post('/api/ad-plan', data),
-  list: params => api.get('/api/ad-plan', { params }),
-  detail: id => api.get(`/api/ad-plan/${id}`),
+  create: (data) => api.post('/api/ad-plan', data),
+  list: (params) => api.get('/api/ad-plan', { params }),
+  detail: (id) => api.get(`/api/ad-plan/${id}`),
   update: (id, data) => api.put(`/api/ad-plan/${id}`, data),
-  delete: id => api.delete(`/api/ad-plan/${id}`),
+  delete: (id) => api.delete(`/api/ad-plan/${id}`),
+  batchUpdateStatus: (ids, status) => api.post('/api/ad-plan/batch/status', { ids, status }),
+  batchDelete: (ids) => api.post('/api/ad-plan/batch/delete', { ids }),
 };
 ```
+
+### 5.2 广告计划列表页面（src/views/AdPlan.vue）
+
+**关键特性：**
+- 支持批量选择
+- 批量操作（启用、暂停、删除）
+- 筛选功能（平台、状态、账户）
+- 表格展示统计数据
+- UI样式对齐参考网站
+
+**批量操作示例：**
+
+```vue
+<template>
+  <div class="ad-plan-container">
+    <!-- 批量操作栏 -->
+    <div v-if="selectedRows.length > 0" class="batch-actions">
+      <el-button type="primary" @click="batchUpdateStatus('active')">
+        批量启用 ({{ selectedRows.length }})
+      </el-button>
+      <el-button type="warning" @click="batchUpdateStatus('paused')">
+        批量暂停 ({{ selectedRows.length }})
+      </el-button>
+      <el-button type="danger" @click="batchDelete">
+        批量删除 ({{ selectedRows.length }})
+      </el-button>
+    </div>
+
+    <!-- 表格 -->
+    <el-table
+      :data="planList"
+      v-loading="loading"
+      border
+      @selection-change="handleSelectionChange"
+    >
+      <el-table-column type="selection" width="55" />
+      <!-- 其他列... -->
+    </el-table>
+  </div>
+</template>
+
+<script setup>
+// 批量操作处理
+const batchUpdateStatus = async (status) => {
+  const ids = selectedRows.value.map(row => row._id);
+  await adPlanApi.batchUpdateStatus(ids, status);
+  ElMessage.success('批量操作成功');
+  loadPlans();
+};
+
+const batchDelete = async () => {
+  const ids = selectedRows.value.map(row => row._id);
+  await ElMessageBox.confirm('确定要删除选中的计划吗？', '提示', { type: 'warning' });
+  await adPlanApi.batchDelete(ids);
+  ElMessage.success('批量删除成功');
+  loadPlans();
+};
+</script>
+```
+
+## 六、对齐检查清单
+
+### 后端检查项
+- [ ] 所有接口返回统一格式：`{ code, message, data }`
+- [ ] 批量操作接口实现
+- [ ] 错误响应格式统一
+
+### 前端检查项
+- [ ] API调用参数名与后端一致
+- [ ] 批量操作功能正常
+- [ ] UI样式对齐参考网站
+- [ ] 表格数据展示正确
+
+### 接口对齐检查
+- [ ] 批量更新状态：`POST /api/ad-plan/batch/status` - 前后端参数一致
+- [ ] 批量删除：`POST /api/ad-plan/batch/delete` - 前后端参数一致
+
+### UI 样式检查
+- [ ] 页面使用蓝色主题
+- [ ] 批量操作栏样式符合规范
+- [ ] 表格样式对齐参考网站
+- [ ] 响应式布局正常
+
+**注意：**完整的前端实现代码与原文件保持一致，只需确保添加批量操作功能和UI样式对齐。

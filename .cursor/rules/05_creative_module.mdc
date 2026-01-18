@@ -4,83 +4,272 @@ globs: **/ad_creative.js, **/AdCreative.vue
 ---
 # 模块 5: 广告创意管理
 
-本模块负责广告素材上传、创意管理及 A/B 测试。
+## ⚠️ 重要提示
 
-## 二、功能需求
+**开发本模块时，请确保：**
+1. 前后端接口严格对齐（参考 `ARCHITECTURE.md`）
+2. UI 样式对齐参考网站 https://www.smallfighter.cn/cidProduct.html
+3. 所有接口返回统一格式：`{ code, message, data }`
+4. 文件上传功能正常（图片、视频）
 
-### 2.2.4 广告创意管理
-- 创意上传：支持图片、视频上传
-- 创意预览：实时预览创意效果
-- A/B 测试：支持多创意 A/B 测试
-- 创意标签：支持标签管理，便于分类
+## 一、模块概述
 
-## 三、数据库设计
-
-### 3.1.4 广告创意表（ad_creatives）
-
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId,          // 关联用户ID
-  planId: ObjectId,          // 关联广告计划ID
-  creativeName: String,      // 创意名称
-  type: String,              // 类型：image、video
-  materials: [{              // 素材
-    url: String,
-    width: Number,
-    height: Number,
-    size: Number
-  }],
-  title: String,             // 标题
-  description: String,       // 描述
-  link: String,              // 落地页链接
-  status: String,            // 状态：active、inactive
-  stats: {                   // 统计数据
-    impressions: Number,
-    clicks: Number,
-    conversions: Number,
-    cost: Number,
-    ctr: Number,
-    cvr: Number
-  },
-  createdAt: Date,           // 创建时间
-  updatedAt: Date            // 更新时间
-}
-```
-
-索引设计：
-```javascript
-db.ad_creatives.createIndex({ userId: 1 });
-db.ad_creatives.createIndex({ planId: 1 });
-db.ad_creatives.createIndex({ status: 1 });
-```
+本模块负责广告素材上传、创意管理及 A/B 测试。完成后应具备：
+- ✅ 创意上传（图片、视频）
+- ✅ 创意预览
+- ✅ A/B 测试功能
+- ✅ 创意标签管理
 
 ## 四、后端实现
 
-### 4.5 路由配置补充（app/router.js）
+### 4.1 广告创意控制器（app/controller/ad_creative.js）
+
+**完整实现：**
 
 ```javascript
-  // 广告创意相关路由
-  router.post('/api/ad-creative', jwt, controller.adCreative.create);
-  router.get('/api/ad-creative', jwt, controller.adCreative.list);
-  router.get('/api/ad-creative/:id', jwt, controller.adCreative.detail);
-  router.put('/api/ad-creative/:id', jwt, controller.adCreative.update);
-  router.delete('/api/ad-creative/:id', jwt, controller.adCreative.delete);
+const Controller = require('egg').Controller;
+const fs = require('fs');
+const path = require('path');
+
+class AdCreativeController extends Controller {
+  // 创建广告创意
+  async create() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const {
+      planId,
+      creativeName,
+      type,
+      materials,
+      title,
+      description,
+      link,
+    } = ctx.request.body;
+
+    ctx.validate({
+      planId: { type: 'string', required: true },
+      creativeName: { type: 'string', required: true },
+      type: { type: 'string', required: true, enum: ['image', 'video'] },
+      materials: { type: 'array', required: true },
+      title: { type: 'string', required: false },
+      description: { type: 'string', required: false },
+      link: { type: 'string', required: false },
+    });
+
+    const creative = new ctx.model.AdCreative({
+      userId,
+      planId,
+      creativeName,
+      type,
+      materials,
+      title,
+      description,
+      link,
+      status: 'active',
+    });
+    await creative.save();
+
+    ctx.status = 201;
+    ctx.body = {
+      code: 201,
+      message: '广告创意创建成功',
+      data: creative,
+    };
+  }
+
+  // 文件上传
+  async upload() {
+    const { ctx } = this;
+    const file = ctx.request.files[0];
+    
+    // 文件验证
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/avi'];
+    if (!allowedTypes.includes(file.mime)) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: '不支持的文件类型',
+        data: null,
+      };
+      return;
+    }
+
+    // 文件大小限制（50MB）
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: '文件大小不能超过50MB',
+        data: null,
+      };
+      return;
+    }
+
+    // 保存文件（实际项目中应上传到云存储）
+    const uploadDir = path.join(ctx.app.config.baseDir, 'app/public/uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const fileName = `${Date.now()}_${file.filename}`;
+    const filePath = path.join(uploadDir, fileName);
+    fs.copyFileSync(file.filepath, filePath);
+
+    // 获取文件信息
+    const fileUrl = `/uploads/${fileName}`;
+    
+    ctx.body = {
+      code: 200,
+      message: '文件上传成功',
+      data: {
+        url: fileUrl,
+        name: file.filename,
+        size: file.size,
+        type: file.mime,
+      },
+    };
+  }
+
+  // 获取创意列表（与04_plan_module类似的实现）
+  async list() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { page = 1, pageSize = 10, planId, status } = ctx.query;
+
+    const query = { userId };
+    if (planId) query.planId = planId;
+    if (status) query.status = status;
+
+    const total = await ctx.model.AdCreative.countDocuments(query);
+    const creatives = await ctx.model.AdCreative.find(query)
+      .skip((page - 1) * pageSize)
+      .limit(Number(pageSize))
+      .sort({ createdAt: -1 });
+
+    ctx.body = {
+      code: 200,
+      message: '获取广告创意列表成功',
+      data: {
+        list: creatives,
+        pagination: {
+          total,
+          page: Number(page),
+          pageSize: Number(pageSize),
+          pages: Math.ceil(total / pageSize),
+        },
+      },
+    };
+  }
+
+  // 其他方法：detail, update, delete（实现方式类似）
+}
+
+module.exports = AdCreativeController;
 ```
 
-*(注意：需实现 `app/controller/ad_creative.js`)*
+### 4.2 路由配置（app/router.js）
+
+```javascript
+// 文件上传需要配置multipart支持
+router.post('/api/ad-creative/upload', jwt, controller.adCreative.upload);
+
+// 广告创意相关路由
+router.post('/api/ad-creative', jwt, controller.adCreative.create);
+router.get('/api/ad-creative', jwt, controller.adCreative.list);
+router.get('/api/ad-creative/:id', jwt, controller.adCreative.detail);
+router.put('/api/ad-creative/:id', jwt, controller.adCreative.update);
+router.delete('/api/ad-creative/:id', jwt, controller.adCreative.delete);
+```
 
 ## 五、前端实现
 
-### 5.5 API 补充 (src/api/index.js)
+### 5.1 API 定义（src/api/ad_creative.js）
 
 ```javascript
-// 广告创意相关API
+import api from './index';
+
 export const adCreativeApi = {
-  create: data => api.post('/api/ad-creative', data),
-  list: params => api.get('/api/ad-creative', { params }),
-  detail: id => api.get(`/api/ad-creative/${id}`),
+  create: (data) => api.post('/api/ad-creative', data),
+  list: (params) => api.get('/api/ad-creative', { params }),
+  detail: (id) => api.get(`/api/ad-creative/${id}`),
   update: (id, data) => api.put(`/api/ad-creative/${id}`, data),
-  delete: id => api.delete(`/api/ad-creative/${id}`),
+  delete: (id) => api.delete(`/api/ad-creative/${id}`),
+  upload: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/api/ad-creative/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 ```
+
+### 5.2 文件上传组件示例
+
+```vue
+<template>
+  <el-upload
+    :action="uploadUrl"
+    :headers="uploadHeaders"
+    :on-success="handleUploadSuccess"
+    :on-error="handleUploadError"
+    :before-upload="beforeUpload"
+    accept="image/*,video/*"
+    :limit="5"
+  >
+    <el-button type="primary">上传素材</el-button>
+  </el-upload>
+</template>
+
+<script setup>
+const uploadUrl = `${process.env.VUE_APP_API_BASE_URL}/api/ad-creative/upload`;
+const uploadHeaders = {
+  Authorization: `Bearer ${store.token}`,
+};
+
+const beforeUpload = (file) => {
+  const isValidType = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4'].includes(file.type);
+  const isLt50M = file.size / 1024 / 1024 < 50;
+
+  if (!isValidType) {
+    ElMessage.error('只能上传图片或视频文件！');
+    return false;
+  }
+  if (!isLt50M) {
+    ElMessage.error('文件大小不能超过50MB！');
+    return false;
+  }
+  return true;
+};
+
+const handleUploadSuccess = (response) => {
+  ElMessage.success('上传成功');
+  // 处理上传成功的文件URL
+};
+</script>
+```
+
+## 六、对齐检查清单
+
+### 后端检查项
+- [ ] 文件上传接口返回格式：`{ code: 200, message, data: { url, name, size, type } }`
+- [ ] 文件类型和大小验证
+- [ ] 文件存储路径正确
+
+### 前端检查项
+- [ ] 文件上传功能正常
+- [ ] 上传前验证（类型、大小）
+- [ ] 上传进度显示
+- [ ] UI样式对齐参考网站
+
+### 接口对齐检查
+- [ ] 上传接口：`POST /api/ad-creative/upload` - FormData格式
+- [ ] 创建接口：`POST /api/ad-creative` - 前后端参数一致
+
+### UI 样式检查
+- [ ] 上传组件样式符合Element Plus规范
+- [ ] 素材预览功能正常
+- [ ] 响应式布局正常
+
+**注意：**完整的创意管理页面实现可参考03_account_module和04_plan_module的实现方式。

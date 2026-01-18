@@ -4,24 +4,39 @@ globs: **/statistics.js, **/Dashboard.vue, **/Statistics.vue
 ---
 # 模块 6: 数据统计与优化
 
-本模块负责数据统计分析、报表生成及智能优化建议，包含仪表盘页面的实现。
+## ⚠️ 重要提示
+
+**开发本模块时，请确保：**
+1. 前后端接口严格对齐（参考 `ARCHITECTURE.md`）
+2. UI 样式对齐参考网站 https://www.smallfighter.cn/cidProduct.html
+3. 所有接口返回统一格式：`{ code, message, data }`
+4. 图表样式参考网站，使用蓝色主题
+
+## 一、模块概述
+
+本模块负责数据统计分析、报表生成及智能优化建议。完成后应具备：
+- ✅ 实时数据监控（仪表盘）
+- ✅ 历史数据查询（按时间维度）
+- ✅ 效果分析（ROI、CTR、CVR等关键指标）
+- ✅ 报表生成（支持导出Excel、PDF）
+- ✅ 图表可视化（参考网站风格）
 
 ## 二、功能需求
 
-### 2.2.5 数据统计分析
-- 实时数据监控：展示实时投放数据
-- 历史数据查询：支持按时间维度查询
-- 效果分析：ROI、CTR、CVR 等关键指标分析
-- 报表生成：支持导出 Excel、PDF 报表
+### 2.1 数据统计分析
+- **实时数据监控**：展示实时投放数据
+- **历史数据查询**：支持按时间维度查询
+- **效果分析**：ROI、CTR、CVR 等关键指标分析
+- **报表生成**：支持导出 Excel、PDF 报表
 
-### 2.2.6 智能优化建议
-- 投放策略优化：基于 AI 算法的投放建议
-- 创意优化建议：基于用户反馈的创意改进建议
-- 预算分配建议：基于效果数据的预算调整建议
+### 2.2 智能优化建议
+- **投放策略优化**：基于 AI 算法的投放建议
+- **创意优化建议**：基于用户反馈的创意改进建议
+- **预算分配建议**：基于效果数据的预算调整建议
 
 ## 三、数据库设计
 
-### 3.1.5 数据统计表（statistics）
+### 3.1 数据统计表（statistics）
 
 ```javascript
 {
@@ -36,6 +51,7 @@ globs: **/statistics.js, **/Dashboard.vue, **/Statistics.vue
     clicks: Number,          // 点击量
     conversions: Number,     // 转化量
     cost: Number,            // 消耗
+    revenue: Number,         //  revenue收入
     ctr: Number,             // 点击率
     cvr: Number,             // 转化率
     roi: Number              // 投资回报率
@@ -45,18 +61,175 @@ globs: **/statistics.js, **/Dashboard.vue, **/Statistics.vue
 }
 ```
 
-索引设计：
+**索引设计**：
 ```javascript
 db.statistics.createIndex({ userId: 1 });
 db.statistics.createIndex({ planId: 1 });
 db.statistics.createIndex({ creativeId: 1 });
 db.statistics.createIndex({ date: 1 });
 db.statistics.createIndex({ platform: 1 });
+db.statistics.createIndex({ userId: 1, date: 1 });
 ```
 
 ## 四、后端实现
 
-### 4.5 路由配置补充（app/router.js）
+### 4.1 数据统计控制器（app/controller/statistics.js）
+
+```javascript
+const Controller = require('egg').Controller;
+
+class StatisticsController extends Controller {
+  // 获取统计数据
+  async getStatistics() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { timeRange = '7d', platform, planId } = ctx.query;
+
+    // 计算时间范围
+    const now = new Date();
+    let startDate = new Date();
+    switch (timeRange) {
+      case '7d':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case '30d':
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case '90d':
+        startDate.setDate(now.getDate() - 90);
+        break;
+      default:
+        startDate.setDate(now.getDate() - 7);
+    }
+
+    // 构建查询条件
+    const query = { userId, date: { $gte: startDate, $lte: now } };
+    if (platform) query.platform = platform;
+    if (planId) query.planId = planId;
+
+    // 聚合统计数据
+    const stats = await ctx.model.Statistics.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: null,
+          totalImpressions: { $sum: '$metrics.impressions' },
+          totalClicks: { $sum: '$metrics.clicks' },
+          totalConversions: { $sum: '$metrics.conversions' },
+          totalCost: { $sum: '$metrics.cost' },
+          totalRevenue: { $sum: '$metrics.revenue' },
+        },
+      },
+    ]);
+
+    // 按日期聚合（用于趋势图）
+    const trendData = await ctx.model.Statistics.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+          impressions: { $sum: '$metrics.impressions' },
+          clicks: { $sum: '$metrics.clicks' },
+          conversions: { $sum: '$metrics.conversions' },
+          cost: { $sum: '$metrics.cost' },
+          revenue: { $sum: '$metrics.revenue' },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // 按平台聚合（用于平台对比）
+    const platformData = await ctx.model.Statistics.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: '$platform',
+          impressions: { $sum: '$metrics.impressions' },
+          clicks: { $sum: '$metrics.clicks' },
+          conversions: { $sum: '$metrics.conversions' },
+          cost: { $sum: '$metrics.cost' },
+          revenue: { $sum: '$metrics.revenue' },
+        },
+      },
+    ]);
+
+    // 计算指标
+    const summary = stats[0] || {};
+    const summaryData = {
+      totalImpressions: summary.totalImpressions || 0,
+      totalClicks: summary.totalClicks || 0,
+      totalConversions: summary.totalConversions || 0,
+      totalCost: summary.totalCost || 0,
+      totalRevenue: summary.totalRevenue || 0,
+      ctr: summary.totalImpressions > 0 
+        ? (summary.totalClicks / summary.totalImpressions * 100).toFixed(2) 
+        : 0,
+      cvr: summary.totalClicks > 0 
+        ? (summary.totalConversions / summary.totalClicks * 100).toFixed(2) 
+        : 0,
+      roi: summary.totalCost > 0 
+        ? ((summary.totalRevenue - summary.totalCost) / summary.totalCost * 100).toFixed(2) 
+        : 0,
+    };
+
+    // 格式化趋势数据
+    const costTrend = {
+      dates: trendData.map(item => item._id),
+      costs: trendData.map(item => item.cost),
+      conversions: trendData.map(item => item.conversions),
+    };
+
+    // 格式化平台对比数据
+    const platformComparison = {
+      platforms: platformData.map(item => item._id),
+      costs: platformData.map(item => item.cost),
+      conversions: platformData.map(item => item.conversions),
+      rois: platformData.map(item => 
+        item.cost > 0 ? ((item.revenue - item.cost) / item.cost * 100).toFixed(2) : 0
+      ),
+    };
+
+    ctx.body = {
+      code: 200,
+      message: '获取统计数据成功',
+      data: {
+        summary: summaryData,
+        costTrend,
+        platformComparison,
+      },
+    };
+  }
+
+  // 获取计划统计数据
+  async getPlanStatistics() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { id } = ctx.params;
+    const { startDate, endDate } = ctx.query;
+
+    const query = { userId, planId: id };
+    if (startDate) query.date = { ...query.date, $gte: new Date(startDate) };
+    if (endDate) query.date = { ...query.date, $lte: new Date(endDate) };
+
+    // 实现类似getStatistics的聚合逻辑
+    // ...
+  }
+
+  // 获取创意统计数据
+  async getCreativeStatistics() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { id } = ctx.params;
+
+    // 实现类似getStatistics的聚合逻辑
+    // ...
+  }
+}
+
+module.exports = StatisticsController;
+```
+
+### 4.2 路由配置（app/router.js）
 
 ```javascript
   // 数据统计相关路由
@@ -65,119 +238,66 @@ db.statistics.createIndex({ platform: 1 });
   router.get('/api/statistics/creative/:id', jwt, controller.statistics.getCreativeStatistics);
 ```
 
-*(注意：需实现 `app/controller/statistics.js`)*
-
 ## 五、前端实现
 
-### 5.5 API 补充 (src/api/index.js)
+### 5.1 API 定义（src/api/statistics.js）
 
 ```javascript
-// 数据统计相关API
+import api from './index';
+
 export const statisticsApi = {
-  getStatistics: params => api.get('/api/statistics', { params }),
+  getStatistics: (params) => api.get('/api/statistics', { params }),
   getPlanStatistics: (id, params) => api.get(`/api/statistics/plan/${id}`, { params }),
   getCreativeStatistics: (id, params) => api.get(`/api/statistics/creative/${id}`, { params }),
 };
 ```
 
-### 5.6.2 仪表盘页面（src/views/Dashboard.vue）
+### 5.2 仪表盘页面（src/views/Dashboard.vue）
+
+**关键优化点：**
+1. 图表样式对齐参考网站（蓝色主题）
+2. 卡片样式使用圆角和阴影
+3. 数据展示清晰直观
+4. 响应式布局
+
+**关键代码补充：**
 
 ```vue
 <template>
   <div class="dashboard-container">
+    <!-- 统计卡片 -->
     <div class="stats-cards">
-      <el-card shadow="hover" class="stat-card">
+      <el-card shadow="hover" class="stat-card card-shadow">
         <div class="stat-content">
           <div class="stat-title">今日消耗</div>
-          <div class="stat-value">{{ stats.todayCost.toFixed(2) }} 元</div>
-          <div class="stat-change" :class="{ 'increase': stats.costChange > 0, 'decrease': stats.costChange < 0 }">
-            <el-icon v-if="stats.costChange > 0"><arrow-up /></el-icon>
-            <el-icon v-else-if="stats.costChange < 0"><arrow-down /></el-icon>
-            {{ Math.abs(stats.costChange).toFixed(2) }}%
+          <div class="stat-value" style="color: #1890ff">
+            ¥{{ stats.todayCost?.toFixed(2) || '0.00' }}
+          </div>
+          <div class="stat-change" :class="getChangeClass(stats.costChange)">
+            <el-icon v-if="stats.costChange > 0"><ArrowUp /></el-icon>
+            <el-icon v-else-if="stats.costChange < 0"><ArrowDown /></el-icon>
+            {{ Math.abs(stats.costChange || 0).toFixed(2) }}%
           </div>
         </div>
       </el-card>
       
-      <el-card shadow="hover" class="stat-card">
-        <div class="stat-content">
-          <div class="stat-title">今日转化</div>
-          <div class="stat-value">{{ stats.todayConversions }}</div>
-          <div class="stat-change" :class="{ 'increase': stats.conversionChange > 0, 'decrease': stats.conversionChange < 0 }">
-            <el-icon v-if="stats.conversionChange > 0"><arrow-up /></el-icon>
-            <el-icon v-else-if="stats.conversionChange < 0"><arrow-down /></el-icon>
-            {{ Math.abs(stats.conversionChange).toFixed(2) }}%
-          </div>
-        </div>
-      </el-card>
-      
-      <el-card shadow="hover" class="stat-card">
-        <div class="stat-content">
-          <div class="stat-title">今日ROI</div>
-          <div class="stat-value">{{ stats.todayROI.toFixed(2) }}</div>
-          <div class="stat-change" :class="{ 'increase': stats.roiChange > 0, 'decrease': stats.roiChange < 0 }">
-            <el-icon v-if="stats.roiChange > 0"><arrow-up /></el-icon>
-            <el-icon v-else-if="stats.roiChange < 0"><arrow-down /></el-icon>
-            {{ Math.abs(stats.roiChange).toFixed(2) }}%
-          </div>
-        </div>
-      </el-card>
-      
-      <el-card shadow="hover" class="stat-card">
-        <div class="stat-content">
-          <div class="stat-title">活跃计划</div>
-          <div class="stat-value">{{ stats.activePlans }}</div>
-          <div class="stat-change" :class="{ 'increase': stats.planChange > 0, 'decrease': stats.planChange < 0 }">
-            <el-icon v-if="stats.planChange > 0"><arrow-up /></el-icon>
-            <el-icon v-else-if="stats.planChange < 0"><arrow-down /></el-icon>
-            {{ Math.abs(stats.planChange).toFixed(2) }}%
-          </div>
-        </div>
-      </el-card>
+      <!-- 其他统计卡片类似 -->
     </div>
     
+    <!-- 图表 -->
     <div class="charts-container">
-      <el-card shadow="hover" class="chart-card">
+      <el-card shadow="hover" class="chart-card card-shadow">
         <template #header>
           <div class="card-header">
             <span>消耗趋势</span>
             <el-select v-model="timeRange" class="time-select" placeholder="选择时间范围">
-              <el-option label="近7天" value="7d"></el-option>
-              <el-option label="近30天" value="30d"></el-option>
-              <el-option label="近90天" value="90d"></el-option>
+              <el-option label="近7天" value="7d" />
+              <el-option label="近30天" value="30d" />
+              <el-option label="近90天" value="90d" />
             </el-select>
           </div>
         </template>
         <div id="costTrendChart" class="chart"></div>
-      </el-card>
-      
-      <el-card shadow="hover" class="chart-card">
-        <template #header>
-          <div class="card-header">
-            <span>平台效果对比</span>
-          </div>
-        </template>
-        <div id="platformComparisonChart" class="chart"></div>
-      </el-card>
-    </div>
-    
-    <div class="recent-activity">
-      <el-card shadow="hover">
-        <template #header>
-          <div class="card-header">
-            <span>最近活动</span>
-          </div>
-        </template>
-        <el-table :data="recentActivity" border style="width: 100%">
-          <el-table-column prop="time" label="时间" width="180"></el-table-column>
-          <el-table-column prop="activity" label="活动"></el-table-column>
-          <el-table-column prop="status" label="状态" width="120">
-            <template #default="scope">
-              <el-tag :type="scope.row.status === 'success' ? 'success' : 'warning'">
-                {{ scope.row.status === 'success' ? '成功' : '失败' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
       </el-card>
     </div>
   </div>
@@ -187,8 +307,9 @@ export const statisticsApi = {
 import { ref, onMounted, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import * as echarts from 'echarts';
-import { statisticsApi } from '../api';
+import { statisticsApi } from '../api/statistics';
 
+const timeRange = ref('7d');
 const stats = ref({
   todayCost: 0,
   costChange: 0,
@@ -200,43 +321,16 @@ const stats = ref({
   planChange: 0,
 });
 
-const timeRange = ref('7d');
-const recentActivity = ref([]);
-
-// 图表实例
 let costTrendChart = null;
-let platformComparisonChart = null;
 
-// 获取统计数据
-const getStatistics = async () => {
-  try {
-    const response = await statisticsApi.getStatistics({ timeRange: timeRange.value });
-    stats.value = response.data.summary;
-    recentActivity.value = response.data.recentActivity;
-    
-    // 更新图表
-    updateCostTrendChart(response.data.costTrend);
-    updatePlatformComparisonChart(response.data.platformComparison);
-  } catch (error) {
-    ElMessage.error(error.message || '获取统计数据失败');
-  }
-};
-
-// 初始化消耗趋势图表
+// 初始化图表（使用蓝色主题）
 const initCostTrendChart = () => {
   const chartDom = document.getElementById('costTrendChart');
   costTrendChart = echarts.init(chartDom);
   
-  window.addEventListener('resize', () => {
-    costTrendChart.resize();
-  });
-};
-
-// 更新消耗趋势图表
-const updateCostTrendChart = (data) => {
-  if (!costTrendChart) return;
-  
+  // 图表主题色（参考网站蓝色系）
   const option = {
+    color: ['#1890ff', '#52c41a'], // 主色调
     tooltip: {
       trigger: 'axis',
     },
@@ -245,7 +339,7 @@ const updateCostTrendChart = (data) => {
     },
     xAxis: {
       type: 'category',
-      data: data.dates,
+      data: [],
     },
     yAxis: [
       {
@@ -259,18 +353,37 @@ const updateCostTrendChart = (data) => {
         position: 'right',
       },
     ],
+    series: [],
+  };
+  
+  costTrendChart.setOption(option);
+  
+  window.addEventListener('resize', () => {
+    costTrendChart.resize();
+  });
+};
+
+// 更新图表数据
+const updateCostTrendChart = (data) => {
+  if (!costTrendChart || !data) return;
+  
+  const option = {
+    xAxis: {
+      data: data.dates || [],
+    },
     series: [
       {
         name: '消耗',
         type: 'bar',
-        data: data.costs,
-        yAxisIndex: 0,
+        data: data.costs || [],
+        itemStyle: {
+          color: '#1890ff', // 参考网站主色调
+        },
       },
       {
         name: '转化',
         type: 'line',
-        data: data.conversions,
-        yAxisIndex: 1,
+        data: data.conversions || [],
         itemStyle: {
           color: '#52c41a',
         },
@@ -281,169 +394,128 @@ const updateCostTrendChart = (data) => {
   costTrendChart.setOption(option);
 };
 
-// 初始化平台对比图表
-const initPlatformComparisonChart = () => {
-  const chartDom = document.getElementById('platformComparisonChart');
-  platformComparisonChart = echarts.init(chartDom);
-  
-  window.addEventListener('resize', () => {
-    platformComparisonChart.resize();
-  });
+// 获取统计数据
+const getStatistics = async () => {
+  try {
+    const response = await statisticsApi.getStatistics({ timeRange: timeRange.value });
+    stats.value = response.data.summary;
+    updateCostTrendChart(response.data.costTrend);
+  } catch (error) {
+    ElMessage.error(error.message || '获取统计数据失败');
+  }
 };
 
-// 更新平台对比图表
-const updatePlatformComparisonChart = (data) => {
-  if (!platformComparisonChart) return;
-  
-  const option = {
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'shadow',
-      },
-    },
-    legend: {
-      data: ['消耗', '转化', 'ROI'],
-    },
-    xAxis: {
-      type: 'category',
-      data: data.platforms,
-    },
-    yAxis: [
-      {
-        type: 'value',
-        name: '消耗(元)',
-        position: 'left',
-      },
-      {
-        type: 'value',
-        name: '转化',
-        position: 'right',
-        offset: 0,
-      },
-      {
-        type: 'value',
-        name: 'ROI',
-        position: 'right',
-        offset: 60,
-      },
-    ],
-    series: [
-      {
-        name: '消耗',
-        type: 'bar',
-        data: data.costs,
-        yAxisIndex: 0,
-      },
-      {
-        name: '转化',
-        type: 'bar',
-        data: data.conversions,
-        yAxisIndex: 1,
-        itemStyle: {
-          color: '#52c41a',
-        },
-      },
-      {
-        name: 'ROI',
-        type: 'line',
-        data: data.rois,
-        yAxisIndex: 2,
-        itemStyle: {
-          color: '#722ed1',
-        },
-      },
-    ],
-  };
-  
-  platformComparisonChart.setOption(option);
+// 获取变化样式类
+const getChangeClass = (change) => {
+  if (change > 0) return 'increase';
+  if (change < 0) return 'decrease';
+  return '';
 };
 
-// 监听时间范围变化
-watch(timeRange, (newValue) => {
+watch(timeRange, () => {
   getStatistics();
 });
 
 onMounted(() => {
   initCostTrendChart();
-  initPlatformComparisonChart();
   getStatistics();
 });
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .dashboard-container {
-  padding: 20px;
+  padding: 24px;
 }
 
 .stats-cards {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
-  flex: 1;
-  min-width: 200px;
-}
-
-.stat-content {
-  text-align: center;
-}
-
-.stat-title {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 10px;
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.stat-change {
-  font-size: 12px;
-}
-
-.increase {
-  color: #f5222d;
-}
-
-.decrease {
-  color: #52c41a;
+  .stat-content {
+    text-align: center;
+    
+    .stat-title {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+    
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    .stat-change {
+      font-size: 14px;
+      
+      &.increase {
+        color: #f5222d;
+      }
+      
+      &.decrease {
+        color: #52c41a;
+      }
+    }
+  }
 }
 
 .charts-container {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
 .chart-card {
-  flex: 1;
-  min-width: 300px;
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .time-select {
+      width: 120px;
+    }
+  }
+  
+  .chart {
+    height: 400px;
+    width: 100%;
+  }
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.time-select {
-  width: 120px;
-}
-
-.chart {
-  height: 300px;
-}
-
-.recent-activity {
-  margin-top: 20px;
+.card-shadow {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
 }
 </style>
 ```
+
+## 六、对齐检查清单
+
+### 后端检查项
+- [ ] 统计数据接口返回格式：`{ code: 200, message, data: { summary, costTrend, platformComparison } }`
+- [ ] 聚合查询性能优化
+- [ ] 时间范围计算正确
+
+### 前端检查项
+- [ ] 图表使用蓝色主题（#1890ff）
+- [ ] 卡片样式使用圆角和阴影
+- [ ] 数据展示清晰直观
+- [ ] 响应式布局正常
+
+### 接口对齐检查
+- [ ] 统计接口：`GET /api/statistics` - 查询参数一致，返回格式一致
+- [ ] 计划统计：`GET /api/statistics/plan/:id` - 返回格式一致
+
+### UI 样式检查
+- [ ] 图表颜色使用蓝色系（参考网站）
+- [ ] 卡片样式对齐参考网站
+- [ ] 数据展示清晰易读
+- [ ] 响应式布局正常
+
+**注意：**原文件中的Dashboard.vue实现已经很完整，主要需要确保图表样式对齐参考网站（使用蓝色主题）和卡片样式统一。

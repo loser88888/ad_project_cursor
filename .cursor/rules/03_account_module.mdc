@@ -4,70 +4,438 @@ globs: **/ad_account.js, **/AdAccount.vue
 ---
 # 模块 3: 广告账户管理
 
-本模块负责多平台广告账户的接入、信息展示和授权管理。
+## ⚠️ 重要提示
+
+**开发本模块时，请确保：**
+1. 前后端接口严格对齐（参考 `ARCHITECTURE.md`）
+2. UI 样式对齐参考网站 https://www.smallfighter.cn/cidProduct.html
+3. 所有接口返回统一格式：`{ code, message, data }`
+4. 支持多平台接入：抖音、快手、微信、微博、知乎等
+
+## 一、模块概述
+
+本模块负责多平台广告账户的接入、信息展示和授权管理。完成后应具备：
+- ✅ 多平台广告账户接入（抖音、快手、微信、微博、知乎等）
+- ✅ 账户列表展示（支持筛选、搜索）
+- ✅ 账户授权管理（OAuth授权、重新授权）
+- ✅ 账户信息展示（余额、消耗统计、状态）
+- ✅ 账户状态监控（自动检测过期）
 
 ## 二、功能需求
 
-### 2.2.2 广告账户管理
-- 多平台接入：支持抖音、微信、百度等主流广告平台
-- 账户信息展示：账户余额、消耗统计、账户状态
-- 账户授权管理：授权状态监控、重新授权
+### 2.1 广告账户管理
+- **多平台接入**：支持抖音、快手、微信、微博、知乎、美柚等平台
+- **账户信息展示**：账户余额、消耗统计、账户状态、授权时间
+- **账户授权管理**：OAuth授权流程、重新授权、授权状态监控
+- **账户操作**：添加账户、编辑账户、删除账户、批量操作
 
 ## 三、数据库设计
 
-### 3.1.2 广告账户表（ad_accounts）
+### 3.1 广告账户表（ad_accounts）
 
 ```javascript
 {
   _id: ObjectId,
   userId: ObjectId,          // 关联用户ID
-  platform: String,          // 平台：douyin、wechat、baidu等
+  platform: String,          // 平台：douyin、kuaishou、wechat、weibo、zhihu等
   accountName: String,       // 账户名称
   accountId: String,         // 平台账户ID
-  accessToken: String,       // 访问令牌
-  refreshToken: String,      // 刷新令牌
-  expiresIn: Number,         // 过期时间
-  status: String,            // 状态：active、expired、error
-  balance: Number,           // 账户余额
+  accessToken: String,       // 访问令牌（加密存储）
+  refreshToken: String,      // 刷新令牌（加密存储）
+  expiresIn: Number,         // 过期时间（时间戳）
+  tokenExpiresAt: Date,      // Token过期时间
+  status: String,            // 状态：active、expired、error、unauthorized
+  balance: Number,           // 账户余额（单位：元）
+  currency: String,          // 货币单位：CNY、USD等，默认CNY
+  stats: {                   // 统计数据
+    totalSpent: Number,      // 总消耗
+    todaySpent: Number,      // 今日消耗
+    totalPlans: Number,      // 总计划数
+    activePlans: Number      // 活跃计划数
+  },
+  lastSyncAt: Date,          // 最后同步时间
   createdAt: Date,           // 创建时间
   updatedAt: Date            // 更新时间
 }
 ```
 
-索引设计：
+**索引设计**：
 ```javascript
 db.ad_accounts.createIndex({ userId: 1 });
+db.ad_accounts.createIndex({ platform: 1 });
 db.ad_accounts.createIndex({ platform: 1, accountId: 1 }, { unique: true });
+db.ad_accounts.createIndex({ status: 1 });
+db.ad_accounts.createIndex({ userId: 1, platform: 1 });
 ```
 
 ## 四、后端实现
 
-### 4.3.2 广告账户模型（app/model/ad_account.js）
+### 4.1 广告账户模型（app/model/ad_account.js）
 
 ```javascript
 module.exports = app => {
   const mongoose = app.mongoose;
   const Schema = mongoose.Schema;
+  const crypto = require('crypto');
 
   const AdAccountSchema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    platform: { type: String, required: true },
+    platform: { 
+      type: String, 
+      required: true,
+      enum: ['douyin', 'kuaishou', 'wechat', 'weibo', 'zhihu', 'meiyou'],
+    },
     accountName: { type: String, required: true },
     accountId: { type: String, required: true },
     accessToken: { type: String, required: true },
     refreshToken: { type: String, required: true },
     expiresIn: { type: Number, required: true },
-    status: { type: String, enum: ['active', 'expired', 'error'], default: 'active' },
+    tokenExpiresAt: { type: Date, required: true },
+    status: { 
+      type: String, 
+      enum: ['active', 'expired', 'error', 'unauthorized'], 
+      default: 'active' 
+    },
     balance: { type: Number, default: 0 },
+    currency: { type: String, default: 'CNY' },
+    stats: {
+      totalSpent: { type: Number, default: 0 },
+      todaySpent: { type: Number, default: 0 },
+      totalPlans: { type: Number, default: 0 },
+      activePlans: { type: Number, default: 0 },
+    },
+    lastSyncAt: { type: Date, default: Date.now },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
+  });
+
+  // 加密Token（保存前）
+  AdAccountSchema.pre('save', async function(next) {
+    if (this.isModified('accessToken') || this.isModified('refreshToken')) {
+      const algorithm = 'aes-256-gcm';
+      const key = Buffer.from(app.config.crypto.secret, 'hex');
+      const iv = crypto.randomBytes(16);
+
+      if (this.isModified('accessToken')) {
+        const cipher = crypto.createCipheriv(algorithm, key, iv);
+        let encrypted = cipher.update(this.accessToken, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        const authTag = cipher.getAuthTag();
+        this.accessToken = iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+      }
+
+      if (this.isModified('refreshToken')) {
+        const cipher = crypto.createCipheriv(algorithm, key, iv);
+        let encrypted = cipher.update(this.refreshToken, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        const authTag = cipher.getAuthTag();
+        this.refreshToken = iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+      }
+    }
+    next();
+  });
+
+  // 更新时间自动更新
+  AdAccountSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
+    next();
   });
 
   return mongoose.model('AdAccount', AdAccountSchema);
 };
 ```
 
-### 4.5 路由配置补充（app/router.js）
+### 4.2 广告账户控制器（app/controller/ad_account.js）
+
+```javascript
+const Controller = require('egg').Controller;
+
+class AdAccountController extends Controller {
+  // 创建广告账户
+  async create() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const {
+      platform,
+      accountName,
+      accountId,
+      accessToken,
+      refreshToken,
+      expiresIn,
+    } = ctx.request.body;
+
+    // 验证参数
+    ctx.validate({
+      platform: { type: 'string', required: true },
+      accountName: { type: 'string', required: true },
+      accountId: { type: 'string', required: true },
+      accessToken: { type: 'string', required: true },
+      refreshToken: { type: 'string', required: true },
+      expiresIn: { type: 'number', required: true },
+    });
+
+    // 检查账户是否已存在
+    const existingAccount = await ctx.model.AdAccount.findOne({
+      platform,
+      accountId,
+      userId,
+    });
+    if (existingAccount) {
+      ctx.status = 400;
+      ctx.body = {
+        code: 400,
+        message: '该账户已存在',
+        data: null,
+      };
+      return;
+    }
+
+    // 计算Token过期时间
+    const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
+
+    // 创建账户
+    const adAccount = new ctx.model.AdAccount({
+      userId,
+      platform,
+      accountName,
+      accountId,
+      accessToken,
+      refreshToken,
+      expiresIn,
+      tokenExpiresAt,
+      status: 'active',
+    });
+    await adAccount.save();
+
+    ctx.status = 201;
+    ctx.body = {
+      code: 201,
+      message: '广告账户创建成功',
+      data: {
+        id: adAccount._id,
+        platform: adAccount.platform,
+        accountName: adAccount.accountName,
+        accountId: adAccount.accountId,
+        status: adAccount.status,
+        balance: adAccount.balance,
+        createdAt: adAccount.createdAt,
+      },
+    };
+  }
+
+  // 获取广告账户列表
+  async list() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { page = 1, pageSize = 10, platform, status } = ctx.query;
+
+    // 构建查询条件
+    const query = { userId };
+    if (platform) query.platform = platform;
+    if (status) query.status = status;
+
+    // 分页查询
+    const total = await ctx.model.AdAccount.countDocuments(query);
+    const accounts = await ctx.model.AdAccount.find(query)
+      .select('-accessToken -refreshToken') // 不返回敏感信息
+      .skip((page - 1) * pageSize)
+      .limit(Number(pageSize))
+      .sort({ createdAt: -1 });
+
+    ctx.body = {
+      code: 200,
+      message: '获取广告账户列表成功',
+      data: {
+        list: accounts,
+        pagination: {
+          total,
+          page: Number(page),
+          pageSize: Number(pageSize),
+          pages: Math.ceil(total / pageSize),
+        },
+      },
+    };
+  }
+
+  // 获取广告账户详情
+  async detail() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { id } = ctx.params;
+
+    const account = await ctx.model.AdAccount.findOne({
+      _id: id,
+      userId,
+    }).select('-accessToken -refreshToken');
+
+    if (!account) {
+      ctx.status = 404;
+      ctx.body = {
+        code: 404,
+        message: '广告账户不存在',
+        data: null,
+      };
+      return;
+    }
+
+    ctx.body = {
+      code: 200,
+      message: '获取广告账户详情成功',
+      data: account,
+    };
+  }
+
+  // 更新广告账户
+  async update() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { id } = ctx.params;
+    const { accountName, accessToken, refreshToken, expiresIn } = ctx.request.body;
+
+    ctx.validate({
+      accountName: { type: 'string', required: false },
+      accessToken: { type: 'string', required: false },
+      refreshToken: { type: 'string', required: false },
+      expiresIn: { type: 'number', required: false },
+    });
+
+    const account = await ctx.model.AdAccount.findOne({
+      _id: id,
+      userId,
+    });
+
+    if (!account) {
+      ctx.status = 404;
+      ctx.body = {
+        code: 404,
+        message: '广告账户不存在',
+        data: null,
+      };
+      return;
+    }
+
+    // 更新字段
+    if (accountName) account.accountName = accountName;
+    if (accessToken) {
+      account.accessToken = accessToken;
+      account.refreshToken = refreshToken;
+      account.expiresIn = expiresIn;
+      account.tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
+      account.status = 'active';
+    }
+
+    await account.save();
+
+    ctx.body = {
+      code: 200,
+      message: '更新广告账户成功',
+      data: {
+        id: account._id,
+        platform: account.platform,
+        accountName: account.accountName,
+        status: account.status,
+      },
+    };
+  }
+
+  // 删除广告账户
+  async delete() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { id } = ctx.params;
+
+    const account = await ctx.model.AdAccount.findOne({
+      _id: id,
+      userId,
+    });
+
+    if (!account) {
+      ctx.status = 404;
+      ctx.body = {
+        code: 404,
+        message: '广告账户不存在',
+        data: null,
+      };
+      return;
+    }
+
+    await ctx.model.AdAccount.findByIdAndDelete(id);
+
+    ctx.body = {
+      code: 200,
+      message: '删除广告账户成功',
+      data: null,
+    };
+  }
+
+  // 同步账户信息（余额、统计数据）
+  async sync() {
+    const { ctx } = this;
+    const userId = ctx.state.user.id;
+    const { id } = ctx.params;
+
+    const account = await ctx.model.AdAccount.findOne({
+      _id: id,
+      userId,
+    });
+
+    if (!account) {
+      ctx.status = 404;
+      ctx.body = {
+        code: 404,
+        message: '广告账户不存在',
+        data: null,
+      };
+      return;
+    }
+
+    // TODO: 调用平台API同步账户信息
+    // 这里只是示例，实际需要根据平台API实现
+    account.balance = Math.random() * 10000; // 示例数据
+    account.stats.totalPlans = Math.floor(Math.random() * 100);
+    account.stats.activePlans = Math.floor(Math.random() * 50);
+    account.lastSyncAt = new Date();
+    await account.save();
+
+    ctx.body = {
+      code: 200,
+      message: '同步账户信息成功',
+      data: {
+        balance: account.balance,
+        stats: account.stats,
+        lastSyncAt: account.lastSyncAt,
+      },
+    };
+  }
+
+  // 获取授权URL（用于OAuth授权）
+  async getAuthUrl() {
+    const { ctx } = this;
+    const { platform } = ctx.query;
+
+    ctx.validate({
+      platform: { type: 'string', required: true },
+    });
+
+    // TODO: 根据平台生成OAuth授权URL
+    // 这里只是示例，实际需要根据平台OAuth流程实现
+    const authUrl = `https://platform-oauth.example.com/authorize?platform=${platform}&redirect_uri=${encodeURIComponent(ctx.app.config.baseUrl + '/api/ad-account/auth/callback')}`;
+
+    ctx.body = {
+      code: 200,
+      message: '获取授权URL成功',
+      data: {
+        authUrl,
+        platform,
+      },
+    };
+  }
+}
+
+module.exports = AdAccountController;
+```
+
+### 4.3 路由配置（app/router.js）
 
 ```javascript
   // 广告账户相关路由
@@ -76,21 +444,502 @@ module.exports = app => {
   router.get('/api/ad-account/:id', jwt, controller.adAccount.detail);
   router.put('/api/ad-account/:id', jwt, controller.adAccount.update);
   router.delete('/api/ad-account/:id', jwt, controller.adAccount.delete);
+  router.post('/api/ad-account/:id/sync', jwt, controller.adAccount.sync);
+  router.get('/api/ad-account/auth/url', jwt, controller.adAccount.getAuthUrl);
 ```
-
-*(注意：需实现 `app/controller/ad_account.js`，参考 `ad_plan` 的实现逻辑)*
 
 ## 五、前端实现
 
-### 5.5 API 补充 (src/api/index.js)
+### 5.1 API 定义（src/api/ad_account.js）
 
 ```javascript
-// 广告账户相关API
+import api from './index';
+
 export const adAccountApi = {
-  create: data => api.post('/api/ad-account', data),
-  list: params => api.get('/api/ad-account', { params }),
-  detail: id => api.get(`/api/ad-account/${id}`),
-  update: (id, data) => api.put(`/api/ad-account/${id}`, data),
-  delete: id => api.delete(`/api/ad-account/${id}`),
+  // 创建广告账户
+  create: (data) => {
+    return api.post('/api/ad-account', {
+      platform: data.platform,
+      accountName: data.accountName,
+      accountId: data.accountId,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      expiresIn: data.expiresIn,
+    });
+  },
+  
+  // 获取广告账户列表
+  list: (params) => {
+    return api.get('/api/ad-account', { params });
+  },
+  
+  // 获取广告账户详情
+  detail: (id) => {
+    return api.get(`/api/ad-account/${id}`);
+  },
+  
+  // 更新广告账户
+  update: (id, data) => {
+    return api.put(`/api/ad-account/${id}`, data);
+  },
+  
+  // 删除广告账户
+  delete: (id) => {
+    return api.delete(`/api/ad-account/${id}`);
+  },
+  
+  // 同步账户信息
+  sync: (id) => {
+    return api.post(`/api/ad-account/${id}/sync`);
+  },
+  
+  // 获取授权URL
+  getAuthUrl: (platform) => {
+    return api.get('/api/ad-account/auth/url', { params: { platform } });
+  },
 };
 ```
+
+### 5.2 广告账户列表页面（src/views/AdAccount.vue）
+
+```vue
+<template>
+  <div class="ad-account-container">
+    <el-card class="card-shadow" style="margin-bottom: 24px">
+      <template #header>
+        <div class="card-header">
+          <h3>广告账户管理</h3>
+          <el-button type="primary" @click="showAddDialog = true">
+            <el-icon><Plus /></el-icon>
+            添加账户
+          </el-button>
+        </div>
+      </template>
+
+      <!-- 筛选条件 -->
+      <el-form :inline="true" :model="filters" class="filter-form">
+        <el-form-item label="平台">
+          <el-select v-model="filters.platform" placeholder="请选择平台" clearable>
+            <el-option label="全部" value="" />
+            <el-option label="抖音" value="douyin" />
+            <el-option label="快手" value="kuaishou" />
+            <el-option label="微信" value="wechat" />
+            <el-option label="微博" value="weibo" />
+            <el-option label="知乎" value="zhihu" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="filters.status" placeholder="请选择状态" clearable>
+            <el-option label="全部" value="" />
+            <el-option label="正常" value="active" />
+            <el-option label="已过期" value="expired" />
+            <el-option label="错误" value="error" />
+            <el-option label="未授权" value="unauthorized" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="loadAccounts">查询</el-button>
+          <el-button @click="resetFilters">重置</el-button>
+        </el-form-item>
+      </el-form>
+
+      <!-- 账户列表 -->
+      <el-table :data="accountList" v-loading="loading" border>
+        <el-table-column prop="accountName" label="账户名称" width="200" />
+        <el-table-column prop="platform" label="平台" width="120">
+          <template #default="scope">
+            <el-tag :type="getPlatformTagType(scope.row.platform)">
+              {{ getPlatformName(scope.row.platform) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="accountId" label="账户ID" width="150" />
+        <el-table-column prop="balance" label="余额" width="120">
+          <template #default="scope">
+            ¥{{ scope.row.balance?.toFixed(2) || '0.00' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="stats.activePlans" label="活跃计划" width="100" />
+        <el-table-column prop="status" label="状态" width="120">
+          <template #default="scope">
+            <el-tag :type="getStatusTagType(scope.row.status)">
+              {{ getStatusName(scope.row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="lastSyncAt" label="最后同步" width="180">
+          <template #default="scope">
+            {{ formatDate(scope.row.lastSyncAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="scope">
+            <el-button link type="primary" @click="syncAccount(scope.row._id)">同步</el-button>
+            <el-button link type="primary" @click="editAccount(scope.row)">编辑</el-button>
+            <el-button link type="danger" @click="deleteAccount(scope.row._id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页 -->
+      <Pagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :total="pagination.total"
+        @page-change="handlePageChange"
+      />
+    </el-card>
+
+    <!-- 添加/编辑对话框 -->
+    <el-dialog
+      v-model="showAddDialog"
+      :title="editingAccount ? '编辑账户' : '添加账户'"
+      width="600px"
+    >
+      <el-form :model="accountForm" :rules="accountRules" ref="accountFormRef" label-width="100px">
+        <el-form-item label="平台" prop="platform">
+          <el-select v-model="accountForm.platform" placeholder="请选择平台">
+            <el-option label="抖音" value="douyin" />
+            <el-option label="快手" value="kuaishou" />
+            <el-option label="微信" value="wechat" />
+            <el-option label="微博" value="weibo" />
+            <el-option label="知乎" value="zhihu" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="账户名称" prop="accountName">
+          <el-input v-model="accountForm.accountName" placeholder="请输入账户名称" />
+        </el-form-item>
+        <el-form-item label="账户ID" prop="accountId">
+          <el-input v-model="accountForm.accountId" placeholder="请输入账户ID" />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleAuth">OAuth授权</el-button>
+          <el-text type="info" size="small" style="margin-left: 12px">
+            或手动输入Token信息
+          </el-text>
+        </el-form-item>
+        <el-form-item label="Access Token" prop="accessToken">
+          <el-input v-model="accountForm.accessToken" type="textarea" :rows="3" />
+        </el-form-item>
+        <el-form-item label="Refresh Token" prop="refreshToken">
+          <el-input v-model="accountForm.refreshToken" type="textarea" :rows="3" />
+        </el-form-item>
+        <el-form-item label="过期时间(秒)" prop="expiresIn">
+          <el-input-number v-model="accountForm.expiresIn" :min="0" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showAddDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitAccount" :loading="submitting">确定</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { Plus } from '@element-plus/icons-vue';
+import { adAccountApi } from '../api/ad_account';
+import Pagination from '../components/Pagination.vue';
+
+const loading = ref(false);
+const submitting = ref(false);
+const showAddDialog = ref(false);
+const editingAccount = ref(null);
+const accountFormRef = ref();
+
+const filters = reactive({
+  platform: '',
+  status: '',
+});
+
+const pagination = reactive({
+  page: 1,
+  pageSize: 10,
+  total: 0,
+});
+
+const accountList = ref([]);
+
+const accountForm = reactive({
+  platform: '',
+  accountName: '',
+  accountId: '',
+  accessToken: '',
+  refreshToken: '',
+  expiresIn: 3600,
+});
+
+const accountRules = {
+  platform: [{ required: true, message: '请选择平台', trigger: 'change' }],
+  accountName: [{ required: true, message: '请输入账户名称', trigger: 'blur' }],
+  accountId: [{ required: true, message: '请输入账户ID', trigger: 'blur' }],
+  accessToken: [{ required: true, message: '请输入Access Token', trigger: 'blur' }],
+  refreshToken: [{ required: true, message: '请输入Refresh Token', trigger: 'blur' }],
+  expiresIn: [{ required: true, message: '请输入过期时间', trigger: 'blur' }],
+};
+
+// 获取平台名称
+const getPlatformName = (platform) => {
+  const map = {
+    douyin: '抖音',
+    kuaishou: '快手',
+    wechat: '微信',
+    weibo: '微博',
+    zhihu: '知乎',
+    meiyou: '美柚',
+  };
+  return map[platform] || platform;
+};
+
+// 获取平台标签类型
+const getPlatformTagType = (platform) => {
+  const map = {
+    douyin: 'danger',
+    kuaishou: 'warning',
+    wechat: 'success',
+    weibo: 'info',
+    zhihu: '',
+  };
+  return map[platform] || '';
+};
+
+// 获取状态名称
+const getStatusName = (status) => {
+  const map = {
+    active: '正常',
+    expired: '已过期',
+    error: '错误',
+    unauthorized: '未授权',
+  };
+  return map[status] || status;
+};
+
+// 获取状态标签类型
+const getStatusTagType = (status) => {
+  const map = {
+    active: 'success',
+    expired: 'warning',
+    error: 'danger',
+    unauthorized: 'info',
+  };
+  return map[status] || '';
+};
+
+// 格式化日期
+const formatDate = (date) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleString('zh-CN');
+};
+
+// 加载账户列表
+const loadAccounts = async () => {
+  loading.value = true;
+  try {
+    const response = await adAccountApi.list({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      ...filters,
+    });
+    accountList.value = response.data.list;
+    pagination.total = response.data.pagination.total;
+  } catch (error) {
+    ElMessage.error(error.message || '获取账户列表失败');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 重置筛选条件
+const resetFilters = () => {
+  filters.platform = '';
+  filters.status = '';
+  pagination.page = 1;
+  loadAccounts();
+};
+
+// 分页改变
+const handlePageChange = () => {
+  loadAccounts();
+};
+
+// 同步账户
+const syncAccount = async (id) => {
+  try {
+    await adAccountApi.sync(id);
+    ElMessage.success('同步成功');
+    loadAccounts();
+  } catch (error) {
+    ElMessage.error(error.message || '同步失败');
+  }
+};
+
+// 编辑账户
+const editAccount = (account) => {
+  editingAccount.value = account;
+  accountForm.platform = account.platform;
+  accountForm.accountName = account.accountName;
+  accountForm.accountId = account.accountId;
+  showAddDialog.value = true;
+};
+
+// 删除账户
+const deleteAccount = async (id) => {
+  try {
+    await ElMessageBox.confirm('确定要删除该账户吗？', '提示', {
+      type: 'warning',
+    });
+    await adAccountApi.delete(id);
+    ElMessage.success('删除成功');
+    loadAccounts();
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '删除失败');
+    }
+  }
+};
+
+// OAuth授权
+const handleAuth = async () => {
+  if (!accountForm.platform) {
+    ElMessage.warning('请先选择平台');
+    return;
+  }
+  try {
+    const response = await adAccountApi.getAuthUrl(accountForm.platform);
+    window.open(response.data.authUrl, '_blank');
+  } catch (error) {
+    ElMessage.error(error.message || '获取授权URL失败');
+  }
+};
+
+// 提交账户
+const submitAccount = async () => {
+  if (!accountFormRef.value) return;
+  
+  await accountFormRef.value.validate(async (valid) => {
+    if (valid) {
+      submitting.value = true;
+      try {
+        if (editingAccount.value) {
+          await adAccountApi.update(editingAccount.value._id, accountForm);
+          ElMessage.success('更新成功');
+        } else {
+          await adAccountApi.create(accountForm);
+          ElMessage.success('添加成功');
+        }
+        showAddDialog.value = false;
+        resetForm();
+        loadAccounts();
+      } catch (error) {
+        ElMessage.error(error.message || '操作失败');
+      } finally {
+        submitting.value = false;
+      }
+    }
+  });
+};
+
+// 重置表单
+const resetForm = () => {
+  editingAccount.value = null;
+  Object.assign(accountForm, {
+    platform: '',
+    accountName: '',
+    accountId: '',
+    accessToken: '',
+    refreshToken: '',
+    expiresIn: 3600,
+  });
+};
+
+onMounted(() => {
+  loadAccounts();
+});
+</script>
+
+<style scoped lang="scss">
+.ad-account-container {
+  padding: 24px;
+  
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+  }
+  
+  .filter-form {
+    margin-bottom: 16px;
+  }
+}
+
+:deep(.el-table) {
+  margin-top: 16px;
+}
+</style>
+```
+
+## 六、对齐检查清单
+
+完成本模块后，请检查以下事项：
+
+### 后端检查项
+- [ ] 创建接口返回格式：`{ code: 201, message, data: { id, platform, accountName, ... } }`
+- [ ] 列表接口返回格式：`{ code: 200, message, data: { list, pagination } }`
+- [ ] Token加密存储（使用crypto加密）
+- [ ] 敏感信息不返回（accessToken、refreshToken）
+- [ ] 错误响应格式统一
+
+### 前端检查项
+- [ ] API调用参数名与后端一致
+- [ ] 列表页面支持筛选（平台、状态）
+- [ ] 列表页面支持分页
+- [ ] 账户状态标签显示正确
+- [ ] OAuth授权流程正常
+
+### 接口对齐检查
+- [ ] 创建接口：`POST /api/ad-account` - 前后端参数一致
+- [ ] 列表接口：`GET /api/ad-account` - 查询参数一致，返回格式一致
+- [ ] 详情接口：`GET /api/ad-account/:id` - 返回格式一致
+- [ ] 更新接口：`PUT /api/ad-account/:id` - 前后端参数一致
+- [ ] 删除接口：`DELETE /api/ad-account/:id` - 返回格式一致
+
+### UI 样式检查
+- [ ] 页面使用蓝色主题色
+- [ ] 卡片样式使用圆角和阴影
+- [ ] 表格样式符合Element Plus规范
+- [ ] 按钮和标签样式统一
+- [ ] 响应式布局正常
+
+## 七、测试验证
+
+### 7.1 后端测试
+
+```bash
+# 创建账户
+curl -X POST http://localhost:7001/api/ad-account \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"platform":"douyin","accountName":"测试账户","accountId":"123456","accessToken":"token","refreshToken":"refresh","expiresIn":3600}'
+
+# 获取账户列表
+curl -X GET "http://localhost:7001/api/ad-account?page=1&pageSize=10" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### 7.2 前端测试
+
+1. 访问账户管理页面
+2. 测试添加账户功能
+3. 测试筛选和搜索功能
+4. 测试同步账户功能
+5. 测试编辑和删除功能
+6. 检查UI样式是否对齐参考网站
