@@ -1,0 +1,86 @@
+---
+description: Ad creative management including upload, preview, and A/B testing.
+globs: **/ad_creative.js, **/AdCreative.vue
+---
+# 模块 5: 广告创意管理
+
+本模块负责广告素材上传、创意管理及 A/B 测试。
+
+## 二、功能需求
+
+### 2.2.4 广告创意管理
+- 创意上传：支持图片、视频上传
+- 创意预览：实时预览创意效果
+- A/B 测试：支持多创意 A/B 测试
+- 创意标签：支持标签管理，便于分类
+
+## 三、数据库设计
+
+### 3.1.4 广告创意表（ad_creatives）
+
+```javascript
+{
+  _id: ObjectId,
+  userId: ObjectId,          // 关联用户ID
+  planId: ObjectId,          // 关联广告计划ID
+  creativeName: String,      // 创意名称
+  type: String,              // 类型：image、video
+  materials: [{              // 素材
+    url: String,
+    width: Number,
+    height: Number,
+    size: Number
+  }],
+  title: String,             // 标题
+  description: String,       // 描述
+  link: String,              // 落地页链接
+  status: String,            // 状态：active、inactive
+  stats: {                   // 统计数据
+    impressions: Number,
+    clicks: Number,
+    conversions: Number,
+    cost: Number,
+    ctr: Number,
+    cvr: Number
+  },
+  createdAt: Date,           // 创建时间
+  updatedAt: Date            // 更新时间
+}
+```
+
+索引设计：
+```javascript
+db.ad_creatives.createIndex({ userId: 1 });
+db.ad_creatives.createIndex({ planId: 1 });
+db.ad_creatives.createIndex({ status: 1 });
+```
+
+## 四、后端实现
+
+### 4.5 路由配置补充（app/router.js）
+
+```javascript
+  // 广告创意相关路由
+  router.post('/api/ad-creative', jwt, controller.adCreative.create);
+  router.get('/api/ad-creative', jwt, controller.adCreative.list);
+  router.get('/api/ad-creative/:id', jwt, controller.adCreative.detail);
+  router.put('/api/ad-creative/:id', jwt, controller.adCreative.update);
+  router.delete('/api/ad-creative/:id', jwt, controller.adCreative.delete);
+```
+
+*(注意：需实现 `app/controller/ad_creative.js`)*
+
+## 五、前端实现
+
+### 5.5 API 补充 (src/api/index.js)
+
+```javascript
+// 广告创意相关API
+export const adCreativeApi = {
+  create: data => api.post('/api/ad-creative', data),
+  list: params => api.get('/api/ad-creative', { params }),
+  detail: id => api.get(`/api/ad-creative/${id}`),
+  update: (id, data) => api.put(`/api/ad-creative/${id}`, data),
+  delete: id => api.delete(`/api/ad-creative/${id}`),
+};
+```

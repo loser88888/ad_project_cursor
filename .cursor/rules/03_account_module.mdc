@@ -1,0 +1,96 @@
+---
+description: Ad account management including multi-platform connection and authorization.
+globs: **/ad_account.js, **/AdAccount.vue
+---
+# 模块 3: 广告账户管理
+
+本模块负责多平台广告账户的接入、信息展示和授权管理。
+
+## 二、功能需求
+
+### 2.2.2 广告账户管理
+- 多平台接入：支持抖音、微信、百度等主流广告平台
+- 账户信息展示：账户余额、消耗统计、账户状态
+- 账户授权管理：授权状态监控、重新授权
+
+## 三、数据库设计
+
+### 3.1.2 广告账户表（ad_accounts）
+
+```javascript
+{
+  _id: ObjectId,
+  userId: ObjectId,          // 关联用户ID
+  platform: String,          // 平台：douyin、wechat、baidu等
+  accountName: String,       // 账户名称
+  accountId: String,         // 平台账户ID
+  accessToken: String,       // 访问令牌
+  refreshToken: String,      // 刷新令牌
+  expiresIn: Number,         // 过期时间
+  status: String,            // 状态：active、expired、error
+  balance: Number,           // 账户余额
+  createdAt: Date,           // 创建时间
+  updatedAt: Date            // 更新时间
+}
+```
+
+索引设计：
+```javascript
+db.ad_accounts.createIndex({ userId: 1 });
+db.ad_accounts.createIndex({ platform: 1, accountId: 1 }, { unique: true });
+```
+
+## 四、后端实现
+
+### 4.3.2 广告账户模型（app/model/ad_account.js）
+
+```javascript
+module.exports = app => {
+  const mongoose = app.mongoose;
+  const Schema = mongoose.Schema;
+
+  const AdAccountSchema = new Schema({
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    platform: { type: String, required: true },
+    accountName: { type: String, required: true },
+    accountId: { type: String, required: true },
+    accessToken: { type: String, required: true },
+    refreshToken: { type: String, required: true },
+    expiresIn: { type: Number, required: true },
+    status: { type: String, enum: ['active', 'expired', 'error'], default: 'active' },
+    balance: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+  });
+
+  return mongoose.model('AdAccount', AdAccountSchema);
+};
+```
+
+### 4.5 路由配置补充（app/router.js）
+
+```javascript
+  // 广告账户相关路由
+  router.post('/api/ad-account', jwt, controller.adAccount.create);
+  router.get('/api/ad-account', jwt, controller.adAccount.list);
+  router.get('/api/ad-account/:id', jwt, controller.adAccount.detail);
+  router.put('/api/ad-account/:id', jwt, controller.adAccount.update);
+  router.delete('/api/ad-account/:id', jwt, controller.adAccount.delete);
+```
+
+*(注意：需实现 `app/controller/ad_account.js`，参考 `ad_plan` 的实现逻辑)*
+
+## 五、前端实现
+
+### 5.5 API 补充 (src/api/index.js)
+
+```javascript
+// 广告账户相关API
+export const adAccountApi = {
+  create: data => api.post('/api/ad-account', data),
+  list: params => api.get('/api/ad-account', { params }),
+  detail: id => api.get(`/api/ad-account/${id}`),
+  update: (id, data) => api.put(`/api/ad-account/${id}`, data),
+  delete: id => api.delete(`/api/ad-account/${id}`),
+};
+```

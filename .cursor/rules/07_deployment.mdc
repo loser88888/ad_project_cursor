@@ -1,0 +1,110 @@
+---
+description: Deployment guide for backend and frontend.
+globs: deploy/**, Dockerfile, nginx.conf
+---
+# 模块 7: 部署与上线
+
+本模块指导前后端项目的部署和服务器配置。
+
+## 六、部署与上线
+
+### 6.1 后端部署
+
+#### 6.1.1 环境准备
+
+```bash
+# 安装Node.js
+curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# 安装MongoDB
+wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | sudo apt-key add -
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list
+sudo apt-get update
+sudo apt-get install -y mongodb-org
+
+# 启动MongoDB
+sudo systemctl start mongod
+sudo systemctl enable mongod
+```
+
+#### 6.1.2 项目部署
+
+```bash
+# 克隆项目
+git clone https://github.com/your-username/ad-buying-plane-backend.git
+cd ad-buying-plane-backend
+
+# 安装依赖
+npm install --production
+
+# 配置环境变量
+echo '
+export NODE_ENV=production
+export EGG_SERVER_ENV=prod
+export MONGODB_URI=mongodb://localhost:27017/ad_buying_plane
+export JWT_SECRET=your-secret-key
+' >> ~/.bashrc
+source ~/.bashrc
+
+# 使用PM2启动项目
+npm install -g pm2
+pm2 start app.js --name ad-buying-plane-backend
+pm2 startup
+pm2 save
+```
+
+### 6.2 前端部署
+
+#### 6.2.1 项目构建
+
+```bash
+# 克隆项目
+git clone https://github.com/your-username/ad-buying-plane-frontend.git
+cd ad-buying-plane-frontend
+
+# 安装依赖
+npm install
+
+# 构建项目
+npm run build
+```
+
+#### 6.2.2 Nginx 配置
+
+```bash
+# 安装Nginx
+sudo apt-get install -y nginx
+
+# 配置Nginx
+sudo nano /etc/nginx/sites-available/ad-buying-plane
+```
+
+配置文件内容：
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    root /path/to/ad-buying-plane-frontend/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api {
+        proxy_pass http://localhost:7001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+启用配置：
+```bash
+sudo ln -s /etc/nginx/sites-available/ad-buying-plane /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```

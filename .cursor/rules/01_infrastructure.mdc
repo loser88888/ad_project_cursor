@@ -1,0 +1,365 @@
+---
+description: Infrastructure setup, configuration, and common components for both backend and frontend.
+globs: config/**, src/store/**, src/router/**, src/api/**, src/utils/**, src/components/**
+---
+# 模块 1: 基础设施搭建
+
+本模块包含前后端项目的初始化、配置以及基础架构代码。
+
+## 四、后端实现（Egg.js）
+
+### 4.1 项目初始化
+
+```bash
+# 创建Egg.js项目
+mkdir ad-buying-plane-backend
+cd ad-buying-plane-backend
+npm init egg --type=ts
+npm install
+
+# 安装依赖
+npm install egg-mongoose egg-jwt egg-cors egg-validate
+```
+
+### 4.2 配置文件
+
+#### 4.2.1 数据库配置（config/plugin.js）
+
+```javascript
+module.exports = {
+  mongoose: {
+    enable: true,
+    package: 'egg-mongoose',
+  },
+  jwt: {
+    enable: true,
+    package: 'egg-jwt',
+  },
+  cors: {
+    enable: true,
+    package: 'egg-cors',
+  },
+  validate: {
+    enable: true,
+    package: 'egg-validate',
+  },
+};
+```
+
+#### 4.2.2 数据库连接配置（config/config.default.js）
+
+```javascript
+module.exports = appInfo => {
+  const config = {};
+
+  // 数据库配置
+  config.mongoose = {
+    url: 'mongodb://localhost:27017/ad_buying_plane',
+    options: {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    },
+  };
+
+  // JWT配置
+  config.jwt = {
+    secret: 'your-secret-key',
+    expiresIn: '7d',
+  };
+
+  // CORS配置
+  config.cors = {
+    origin: '*',
+    allowMethods: 'GET,HEAD,PUT,POST,DELETE,PATCH',
+  };
+
+  // 安全配置
+  config.security = {
+    csrf: {
+      enable: false,
+    },
+  };
+
+  return config;
+};
+```
+
+### 4.5 路由配置结构（app/router.js）
+
+```javascript
+module.exports = app => {
+  const { router, controller, middleware } = app;
+  const jwt = middleware.jwt({ secret: app.config.jwt.secret });
+
+  // 路由定义将在后续模块中补充
+};
+```
+
+## 五、前端实现（Vue.js）
+
+### 5.1 项目初始化
+
+```bash
+# 创建Vue.js项目
+vue create ad-buying-plane-frontend
+cd ad-buying-plane-frontend
+
+# 安装依赖
+npm install vue-router@next vuex@next element-plus axios echarts
+```
+
+### 5.2 项目结构
+
+```
+ad-buying-plane-frontend/
+├── public/
+├── src/
+│   ├── api/           # API请求
+│   ├── assets/        # 静态资源
+│   ├── components/    # 公共组件
+│   ├── router/        # 路由配置
+│   ├── store/         # 状态管理
+│   ├── utils/         # 工具函数
+│   ├── views/         # 页面组件
+│   ├── App.vue        # 根组件
+│   └── main.js        # 入口文件
+└── package.json
+```
+
+### 5.3 路由配置（src/router/index.js）
+
+```javascript
+import { createRouter, createWebHistory } from 'vue-router';
+import store from '../store';
+
+const routes = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/Register.vue'),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: '/',
+    name: 'Layout',
+    component: () => import('../views/Layout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '/dashboard',
+        name: 'Dashboard',
+        component: () => import('../views/Dashboard.vue'),
+      },
+      // 其他路由将在后续模块添加
+    ],
+  },
+];
+
+const router = createRouter({
+  history: createWebHistory(process.env.BASE_URL),
+  routes,
+});
+
+// 路由守卫
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = store.getters.isAuthenticated;
+  
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    next('/login');
+  } else if (to.name === 'Login' && isAuthenticated) {
+    next('/dashboard');
+  } else {
+    next();
+  }
+});
+
+export default router;
+```
+
+### 5.4 状态管理（src/store/index.js）
+
+```javascript
+import { createStore } from 'vuex';
+import axios from 'axios';
+
+export default createStore({
+  state: {
+    user: null,
+    token: localStorage.getItem('token') || null,
+  },
+  getters: {
+    isAuthenticated: state => !!state.token,
+    currentUser: state => state.user,
+  },
+  mutations: {
+    SET_USER(state, user) {
+      state.user = user;
+    },
+    SET_TOKEN(state, token) {
+      state.token = token;
+      localStorage.setItem('token', token);
+    },
+    LOGOUT(state) {
+      state.user = null;
+      state.token = null;
+      localStorage.removeItem('token');
+    },
+  },
+  actions: {
+    // 用户登录
+    async login({ commit }, credentials) {
+      try {
+        const response = await axios.post('/api/user/login', credentials);
+        const { token, user } = response.data.data;
+        
+        commit('SET_TOKEN', token);
+        commit('SET_USER', user);
+        
+        // 设置Axios默认请求头
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        return response.data;
+      } catch (error) {
+        throw error.response.data;
+      }
+    },
+    
+    // 用户注册
+    async register({ commit }, userData) {
+      try {
+        const response = await axios.post('/api/user/register', userData);
+        return response.data;
+      } catch (error) {
+        throw error.response.data;
+      }
+    },
+    
+    // 获取用户信息
+    async getUserInfo({ commit }) {
+      try {
+        const response = await axios.get('/api/user/info');
+        commit('SET_USER', response.data.data);
+        return response.data;
+      } catch (error) {
+        throw error.response.data;
+      }
+    },
+    
+    // 用户登出
+    logout({ commit }) {
+      commit('LOGOUT');
+      delete axios.defaults.headers.common['Authorization'];
+    },
+  },
+});
+```
+
+### 5.5 API 请求封装（src/api/index.js）
+
+```javascript
+import axios from 'axios';
+import store from '../store';
+
+// 创建Axios实例
+const api = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:7001',
+  timeout: 10000,
+});
+
+// 请求拦截器
+api.interceptors.request.use(
+  config => {
+    const token = store.state.token;
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
+
+// 响应拦截器
+api.interceptors.response.use(
+  response => {
+    return response.data;
+  },
+  error => {
+    if (error.response && error.response.status === 401) {
+      store.dispatch('logout');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error.response.data);
+  }
+);
+
+// 基础API导出，具体业务API在各模块定义
+export default api;
+```
+
+### 5.7 公共组件实现
+
+#### 5.7.1 分页组件（src/components/Pagination.vue）
+
+```vue
+<template>
+  <div class="pagination-container">
+    <el-pagination
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :page-sizes="[10, 20, 50, 100]"
+      :total="total"
+      :disabled="total === 0"
+      background
+      layout="total, sizes, prev, pager, next, jumper"
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange" 
+    ></el-pagination>
+  </div>
+</template>
+
+<script setup>
+import { defineProps, defineEmits, ref, watch } from 'vue';
+
+const props = defineProps({
+  currentPage: {
+    type: Number,
+    default: 1,
+  },
+  pageSize: {
+    type: Number,
+    default: 10,
+  },
+  total: {
+    type: Number,
+    default: 0,
+  },
+});
+
+const emit = defineEmits(['update:currentPage', 'update:pageSize', 'pageChange']);
+
+const handleSizeChange = (val) => {
+  emit('update:pageSize', val);
+  emit('pageChange', props.currentPage, val);
+};
+
+const handleCurrentChange = (val) => {
+  emit('update:currentPage', val);
+  emit('pageChange', val, props.pageSize);
+};
+</script>
+
+<style scoped>
+.pagination-container {
+  text-align: right;
+  margin-top: 20px;
+}
+</style>
+```
