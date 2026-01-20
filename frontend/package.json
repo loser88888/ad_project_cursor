@@ -1,0 +1,25 @@
+{
+  "name": "ad-buying-plane-frontend",
+  "version": "1.0.0",
+  "description": "买量小飞机前端应用",
+  "private": true,
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build": "vue-cli-service build",
+    "lint": "vue-cli-service lint"
+  },
+  "dependencies": {
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.5",
+    "pinia": "^2.1.7",
+    "element-plus": "^2.4.4",
+    "@element-plus/icons-vue": "^2.3.1",
+    "axios": "^1.6.2",
+    "echarts": "^5.4.3"
+  },
+  "devDependencies": {
+    "@vue/cli-service": "^5.0.8",
+    "sass": "^1.69.5",
+    "sass-loader": "^13.3.2"
+  }
+}

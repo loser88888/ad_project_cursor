@@ -1,0 +1,36 @@
+{
+  "name": "ad-buying-plane-backend",
+  "version": "1.0.0",
+  "description": "买量小飞机后端服务",
+  "private": true,
+  "egg": {
+    "typescript": false,
+    "declarations": false
+  },
+  "scripts": {
+    "dev": "egg-bin dev",
+    "start": "egg-scripts start --daemon --title=ad-buying-plane-backend",
+    "stop": "egg-scripts stop --title=ad-buying-plane-backend",
+    "test": "npm run lint -- --fix && npm run test-local",
+    "test-local": "egg-bin test",
+    "lint": "eslint .",
+    "ci": "npm run lint && npm run test-local"
+  },
+  "dependencies": {
+    "egg": "^2.35.1",
+    "egg-scripts": "^2.15.0",
+    "egg-mongoose": "^3.1.0",
+    "egg-jwt": "^3.1.4",
+    "egg-cors": "^2.2.3",
+    "egg-validate": "^2.0.2",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "egg-bin": "^6.13.0",
+    "eslint": "^8.0.0",
+    "eslint-config-egg": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

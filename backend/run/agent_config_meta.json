@@ -1,0 +1,317 @@
+{
+  "keys": "D:\\project_code_cursor\\backend\\config\\config.default.js",
+  "mongoose": {
+    "url": "D:\\project_code_cursor\\backend\\config\\config.default.js",
+    "options": {
+      "useNewUrlParser": "D:\\project_code_cursor\\backend\\config\\config.default.js",
+      "useUnifiedTopology": "D:\\project_code_cursor\\backend\\config\\config.default.js"
+    },
+    "plugins": "D:\\project_code_cursor\\backend\\node_modules\\egg-mongoose\\config\\config.default.js",
+    "loadModel": "D:\\project_code_cursor\\backend\\node_modules\\egg-mongoose\\config\\config.default.js",
+    "app": "D:\\project_code_cursor\\backend\\node_modules\\egg-mongoose\\config\\config.default.js",
+    "agent": "D:\\project_code_cursor\\backend\\node_modules\\egg-mongoose\\config\\config.default.js"
+  },
+  "jwt": {
+    "secret": "D:\\project_code_cursor\\backend\\config\\config.default.js",
+    "expiresIn": "D:\\project_code_cursor\\backend\\config\\config.default.js",
+    "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg-jwt\\config\\config.default.js"
+  },
+  "cors": {
+    "origin": "D:\\project_code_cursor\\backend\\config\\config.default.js",
+    "allowMethods": "D:\\project_code_cursor\\backend\\config\\config.default.js",
+    "credentials": "D:\\project_code_cursor\\backend\\config\\config.default.js"
+  },
+  "security": {
+    "csrf": {
+      "enable": "D:\\project_code_cursor\\backend\\config\\config.default.js",
+      "type": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "ignoreJSON": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "useSession": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "cookieName": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "sessionName": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "headerName": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "bodyName": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "queryName": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "supportedRequests": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "refererWhiteList": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "domainWhiteList": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+    "protocolWhiteList": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+    "defaultMiddleware": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+    "xframe": {
+      "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "value": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "hsts": {
+      "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.local.js",
+      "maxAge": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "includeSubdomains": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "dta": {
+      "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "methodnoallow": {
+      "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "noopen": {
+      "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "nosniff": {
+      "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "referrerPolicy": {
+      "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "value": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "xssProtection": {
+      "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "value": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "csp": {
+      "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "policy": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "ssrf": {
+      "ipBlackList": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "ipExceptionList": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "checkAddress": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    }
+  },
+  "crypto": {
+    "secret": "D:\\project_code_cursor\\backend\\config\\config.default.js"
+  },
+  "baseUrl": "D:\\project_code_cursor\\backend\\config\\config.default.js",
+  "middleware": "D:\\project_code_cursor\\backend\\config\\config.default.js",
+  "session": {
+    "maxAge": "D:\\project_code_cursor\\backend\\node_modules\\egg-session\\config\\config.default.js",
+    "key": "D:\\project_code_cursor\\backend\\node_modules\\egg-session\\config\\config.default.js",
+    "httpOnly": "D:\\project_code_cursor\\backend\\node_modules\\egg-session\\config\\config.default.js",
+    "encrypt": "D:\\project_code_cursor\\backend\\node_modules\\egg-session\\config\\config.default.js",
+    "logValue": "D:\\project_code_cursor\\backend\\node_modules\\egg-session\\config\\config.default.js"
+  },
+  "helper": {
+    "shtml": "D:\\project_code_cursor\\backend\\node_modules\\egg-security\\config\\config.default.js"
+  },
+  "jsonp": {
+    "limit": "D:\\project_code_cursor\\backend\\node_modules\\egg-jsonp\\config\\config.default.js",
+    "callback": "D:\\project_code_cursor\\backend\\node_modules\\egg-jsonp\\config\\config.default.js",
+    "csrf": "D:\\project_code_cursor\\backend\\node_modules\\egg-jsonp\\config\\config.default.js"
+  },
+  "onerror": {
+    "errorPageUrl": "D:\\project_code_cursor\\backend\\node_modules\\egg-onerror\\config\\config.default.js",
+    "appErrorFilter": "D:\\project_code_cursor\\backend\\node_modules\\egg-onerror\\config\\config.default.js",
+    "templatePath": "D:\\project_code_cursor\\backend\\node_modules\\egg-onerror\\config\\config.default.js"
+  },
+  "i18n": {
+    "defaultLocale": "D:\\project_code_cursor\\backend\\node_modules\\egg-i18n\\config\\config.default.js",
+    "dirs": "D:\\project_code_cursor\\backend\\node_modules\\egg-i18n\\config\\config.default.js",
+    "queryField": "D:\\project_code_cursor\\backend\\node_modules\\egg-i18n\\config\\config.default.js",
+    "cookieField": "D:\\project_code_cursor\\backend\\node_modules\\egg-i18n\\config\\config.default.js",
+    "cookieDomain": "D:\\project_code_cursor\\backend\\node_modules\\egg-i18n\\config\\config.default.js",
+    "cookieMaxAge": "D:\\project_code_cursor\\backend\\node_modules\\egg-i18n\\config\\config.default.js"
+  },
+  "watcher": {
+    "type": "D:\\project_code_cursor\\backend\\node_modules\\egg-watcher\\config\\config.local.js",
+    "eventSources": {
+      "default": "D:\\project_code_cursor\\backend\\node_modules\\egg-watcher\\config\\config.default.js",
+      "development": "D:\\project_code_cursor\\backend\\node_modules\\egg-watcher\\config\\config.default.js"
+    }
+  },
+  "customLogger": {
+    "scheduleLogger": {
+      "consoleLevel": "D:\\project_code_cursor\\backend\\node_modules\\egg-schedule\\config\\config.default.js",
+      "file": "D:\\project_code_cursor\\backend\\node_modules\\egg-schedule\\config\\config.default.js"
+    }
+  },
+  "schedule": {
+    "directory": "D:\\project_code_cursor\\backend\\node_modules\\egg-schedule\\config\\config.default.js"
+  },
+  "multipart": {
+    "mode": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "autoFields": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "defaultCharset": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "fieldNameSize": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "fieldSize": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "fields": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "fileSize": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "files": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "fileExtensions": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "whitelist": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "allowArrayField": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "tmpdir": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "cleanSchedule": {
+      "cron": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+      "disable": "D:\\project_code_cursor\\backend\\node_modules\\egg-multipart\\config\\config.default.js"
+    }
+  },
+  "development": {
+    "watchDirs": "D:\\project_code_cursor\\backend\\node_modules\\egg-development\\config\\config.default.js",
+    "ignoreDirs": "D:\\project_code_cursor\\backend\\node_modules\\egg-development\\config\\config.default.js",
+    "fastReady": "D:\\project_code_cursor\\backend\\node_modules\\egg-development\\config\\config.default.js",
+    "reloadOnDebug": "D:\\project_code_cursor\\backend\\node_modules\\egg-development\\config\\config.default.js",
+    "overrideDefault": "D:\\project_code_cursor\\backend\\node_modules\\egg-development\\config\\config.default.js",
+    "overrideIgnore": "D:\\project_code_cursor\\backend\\node_modules\\egg-development\\config\\config.default.js"
+  },
+  "logrotator": {
+    "filesRotateByHour": "D:\\project_code_cursor\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "hourDelimiter": "D:\\project_code_cursor\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "filesRotateBySize": "D:\\project_code_cursor\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "maxFileSize": "D:\\project_code_cursor\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "maxFiles": "D:\\project_code_cursor\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "rotateDuration": "D:\\project_code_cursor\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "maxDays": "D:\\project_code_cursor\\backend\\node_modules\\egg-logrotator\\config\\config.default.js"
+  },
+  "static": {
+    "prefix": "D:\\project_code_cursor\\backend\\node_modules\\egg-static\\config\\config.default.js",
+    "dir": "D:\\project_code_cursor\\backend\\node_modules\\egg-static\\config\\config.default.js",
+    "dynamic": "D:\\project_code_cursor\\backend\\node_modules\\egg-static\\config\\config.default.js",
+    "preload": "D:\\project_code_cursor\\backend\\node_modules\\egg-static\\config\\config.default.js",
+    "buffer": "D:\\project_code_cursor\\backend\\node_modules\\egg-static\\config\\config.default.js",
+    "maxFiles": "D:\\project_code_cursor\\backend\\node_modules\\egg-static\\config\\config.default.js"
+  },
+  "view": {
+    "root": "D:\\project_code_cursor\\backend\\node_modules\\egg-view\\config\\config.default.js",
+    "cache": "D:\\project_code_cursor\\backend\\node_modules\\egg-view\\config\\config.local.js",
+    "defaultExtension": "D:\\project_code_cursor\\backend\\node_modules\\egg-view\\config\\config.default.js",
+    "defaultViewEngine": "D:\\project_code_cursor\\backend\\node_modules\\egg-view\\config\\config.default.js",
+    "mapping": "D:\\project_code_cursor\\backend\\node_modules\\egg-view\\config\\config.default.js"
+  },
+  "validate": "D:\\project_code_cursor\\backend\\node_modules\\egg-validate\\config\\config.default.js",
+  "env": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "name": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "cookies": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "proxy": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "maxIpsCount": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "maxProxyCount": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "protocolHeaders": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "ipHeaders": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "hostHeaders": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "pkg": {
+    "name": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "version": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "description": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "private": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "egg": {
+      "typescript": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "declarations": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "scripts": {
+      "dev": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "start": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "stop": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "test": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "test-local": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "lint": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "ci": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "dependencies": {
+      "egg": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "egg-scripts": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "egg-mongoose": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "egg-jwt": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "egg-cors": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "egg-validate": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "bcryptjs": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "devDependencies": {
+      "egg-bin": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "eslint": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "eslint-config-egg": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "engines": {
+      "node": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+    }
+  },
+  "baseDir": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "HOME": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "rundir": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "dump": {
+    "ignore": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "confusedConfigurations": {
+    "bodyparser": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "notFound": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "sitefile": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "middlewares": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "httpClient": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "notfound": {
+    "pageUrl": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "siteFile": {
+    "/favicon.ico": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "cacheControl": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "bodyParser": {
+    "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "encoding": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "formLimit": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "jsonLimit": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "textLimit": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "strict": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "queryString": {
+      "arrayLimit": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "depth": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "parameterLimit": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "onerror": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "logger": {
+    "dir": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "encoding": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "env": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "level": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "consoleLevel": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "disableConsoleAfterReady": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "outputJSON": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "buffer": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "appLogName": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "coreLogName": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "agentLogName": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "errorLogName": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "coreLogger": {
+      "consoleLevel": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.local.js"
+    },
+    "allowDebugAtProd": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "enablePerformanceTimer": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "httpclient": {
+    "enableDNSCache": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "dnsCacheLookupInterval": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "dnsCacheMaxLength": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "request": {
+      "timeout": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "httpAgent": {
+      "keepAlive": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "freeSocketTimeout": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "maxSockets": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "maxFreeSockets": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "httpsAgent": {
+      "keepAlive": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "freeSocketTimeout": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "maxSockets": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "maxFreeSockets": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+    }
+  },
+  "meta": {
+    "enable": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "logging": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "coreMiddleware": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "workerStartTimeout": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "serverTimeout": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+  "cluster": {
+    "listen": {
+      "path": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "port": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+      "hostname": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+    }
+  },
+  "clusterClient": {
+    "maxWaitTime": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js",
+    "responseTimeout": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "onClientError": "D:\\project_code_cursor\\backend\\node_modules\\egg\\config\\config.default.js"
+}

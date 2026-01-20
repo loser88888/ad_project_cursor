@@ -1,0 +1,470 @@
+[
+  {
+    "name": null,
+    "methods": [
+      "POST"
+    ],
+    "paramNames": [],
+    "path": "/api/user/register",
+    "regexp": "/^\\/api\\/user\\/register(?:\\/(?=$))?$/",
+    "stack": [
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "POST"
+    ],
+    "paramNames": [],
+    "path": "/api/user/login",
+    "regexp": "/^\\/api\\/user\\/login(?:\\/(?=$))?$/",
+    "stack": [
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "HEAD",
+      "GET"
+    ],
+    "paramNames": [],
+    "path": "/api/user/check-email",
+    "regexp": "/^\\/api\\/user\\/check-email(?:\\/(?=$))?$/",
+    "stack": [
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "HEAD",
+      "GET"
+    ],
+    "paramNames": [],
+    "path": "/api/user/info",
+    "regexp": "/^\\/api\\/user\\/info(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "PUT"
+    ],
+    "paramNames": [],
+    "path": "/api/user/info",
+    "regexp": "/^\\/api\\/user\\/info(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "PUT"
+    ],
+    "paramNames": [],
+    "path": "/api/user/password",
+    "regexp": "/^\\/api\\/user\\/password(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "POST"
+    ],
+    "paramNames": [],
+    "path": "/api/ad-account",
+    "regexp": "/^\\/api\\/ad-account(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "HEAD",
+      "GET"
+    ],
+    "paramNames": [],
+    "path": "/api/ad-account",
+    "regexp": "/^\\/api\\/ad-account(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "HEAD",
+      "GET"
+    ],
+    "paramNames": [
+      {
+        "name": "id",
+        "prefix": "/",
+        "delimiter": "/",
+        "optional": false,
+        "repeat": false,
+        "partial": false,
+        "asterisk": false,
+        "pattern": "[^\\/]+?"
+      }
+    ],
+    "path": "/api/ad-account/:id",
+    "regexp": "/^\\/api\\/ad-account\\/((?:[^\\/]+?))(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "PUT"
+    ],
+    "paramNames": [
+      {
+        "name": "id",
+        "prefix": "/",
+        "delimiter": "/",
+        "optional": false,
+        "repeat": false,
+        "partial": false,
+        "asterisk": false,
+        "pattern": "[^\\/]+?"
+      }
+    ],
+    "path": "/api/ad-account/:id",
+    "regexp": "/^\\/api\\/ad-account\\/((?:[^\\/]+?))(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "DELETE"
+    ],
+    "paramNames": [
+      {
+        "name": "id",
+        "prefix": "/",
+        "delimiter": "/",
+        "optional": false,
+        "repeat": false,
+        "partial": false,
+        "asterisk": false,
+        "pattern": "[^\\/]+?"
+      }
+    ],
+    "path": "/api/ad-account/:id",
+    "regexp": "/^\\/api\\/ad-account\\/((?:[^\\/]+?))(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "POST"
+    ],
+    "paramNames": [
+      {
+        "name": "id",
+        "prefix": "/",
+        "delimiter": "/",
+        "optional": false,
+        "repeat": false,
+        "partial": false,
+        "asterisk": false,
+        "pattern": "[^\\/]+?"
+      }
+    ],
+    "path": "/api/ad-account/:id/sync",
+    "regexp": "/^\\/api\\/ad-account\\/((?:[^\\/]+?))\\/sync(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "HEAD",
+      "GET"
+    ],
+    "paramNames": [],
+    "path": "/api/ad-account/auth/url",
+    "regexp": "/^\\/api\\/ad-account\\/auth\\/url(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "POST"
+    ],
+    "paramNames": [],
+    "path": "/api/ad-plan",
+    "regexp": "/^\\/api\\/ad-plan(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "HEAD",
+      "GET"
+    ],
+    "paramNames": [],
+    "path": "/api/ad-plan",
+    "regexp": "/^\\/api\\/ad-plan(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "HEAD",
+      "GET"
+    ],
+    "paramNames": [
+      {
+        "name": "id",
+        "prefix": "/",
+        "delimiter": "/",
+        "optional": false,
+        "repeat": false,
+        "partial": false,
+        "asterisk": false,
+        "pattern": "[^\\/]+?"
+      }
+    ],
+    "path": "/api/ad-plan/:id",
+    "regexp": "/^\\/api\\/ad-plan\\/((?:[^\\/]+?))(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "PUT"
+    ],
+    "paramNames": [
+      {
+        "name": "id",
+        "prefix": "/",
+        "delimiter": "/",
+        "optional": false,
+        "repeat": false,
+        "partial": false,
+        "asterisk": false,
+        "pattern": "[^\\/]+?"
+      }
+    ],
+    "path": "/api/ad-plan/:id",
+    "regexp": "/^\\/api\\/ad-plan\\/((?:[^\\/]+?))(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "DELETE"
+    ],
+    "paramNames": [
+      {
+        "name": "id",
+        "prefix": "/",
+        "delimiter": "/",
+        "optional": false,
+        "repeat": false,
+        "partial": false,
+        "asterisk": false,
+        "pattern": "[^\\/]+?"
+      }
+    ],
+    "path": "/api/ad-plan/:id",
+    "regexp": "/^\\/api\\/ad-plan\\/((?:[^\\/]+?))(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "POST"
+    ],
+    "paramNames": [],
+    "path": "/api/ad-plan/batch/status",
+    "regexp": "/^\\/api\\/ad-plan\\/batch\\/status(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "POST"
+    ],
+    "paramNames": [],
+    "path": "/api/ad-plan/batch/delete",
+    "regexp": "/^\\/api\\/ad-plan\\/batch\\/delete(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "POST"
+    ],
+    "paramNames": [],
+    "path": "/api/ad-creative/upload",
+    "regexp": "/^\\/api\\/ad-creative\\/upload(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "POST"
+    ],
+    "paramNames": [],
+    "path": "/api/ad-creative",
+    "regexp": "/^\\/api\\/ad-creative(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "HEAD",
+      "GET"
+    ],
+    "paramNames": [],
+    "path": "/api/ad-creative",
+    "regexp": "/^\\/api\\/ad-creative(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "HEAD",
+      "GET"
+    ],
+    "paramNames": [
+      {
+        "name": "id",
+        "prefix": "/",
+        "delimiter": "/",
+        "optional": false,
+        "repeat": false,
+        "partial": false,
+        "asterisk": false,
+        "pattern": "[^\\/]+?"
+      }
+    ],
+    "path": "/api/ad-creative/:id",
+    "regexp": "/^\\/api\\/ad-creative\\/((?:[^\\/]+?))(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "PUT"
+    ],
+    "paramNames": [
+      {
+        "name": "id",
+        "prefix": "/",
+        "delimiter": "/",
+        "optional": false,
+        "repeat": false,
+        "partial": false,
+        "asterisk": false,
+        "pattern": "[^\\/]+?"
+      }
+    ],
+    "path": "/api/ad-creative/:id",
+    "regexp": "/^\\/api\\/ad-creative\\/((?:[^\\/]+?))(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "DELETE"
+    ],
+    "paramNames": [
+      {
+        "name": "id",
+        "prefix": "/",
+        "delimiter": "/",
+        "optional": false,
+        "repeat": false,
+        "partial": false,
+        "asterisk": false,
+        "pattern": "[^\\/]+?"
+      }
+    ],
+    "path": "/api/ad-creative/:id",
+    "regexp": "/^\\/api\\/ad-creative\\/((?:[^\\/]+?))(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  },
+  {
+    "name": null,
+    "methods": [
+      "HEAD",
+      "GET"
+    ],
+    "paramNames": [],
+    "path": "/api/statistics",
+    "regexp": "/^\\/api\\/statistics(?:\\/(?=$))?$/",
+    "stack": [
+      "jwtAuth",
+      "wrappedController"
+    ]
+  }
+]
